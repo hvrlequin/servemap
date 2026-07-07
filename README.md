@@ -11,9 +11,9 @@ service en salle (bar, club, restaurant, événement) **sans se parler**.
 
 ## 🔗 Démo en ligne
 
-**_(URL à compléter après déploiement — voir la section « Déployer »)_**
+**👉 https://hvrlequin.github.io/servemap/**
 
-En attendant : télécharger `index.html` et **double-cliquer** — ça marche hors-ligne.
+(Ou télécharger `index.html` et **double-cliquer** — ça marche aussi hors-ligne.)
 
 ---
 
