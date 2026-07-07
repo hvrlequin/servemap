@@ -136,5 +136,11 @@ ServeMap/
 
 ## 📄 Licence & contact
 
-Prototype privé — usage et diffusion à définir par le propriétaire.
-Contact projet : jonathandann43@gmail.com
+**Copyright © 2026 Jonathan Dann. Tous droits réservés.**
+
+Logiciel **propriétaire**. Le code est public pour consultation et évaluation
+uniquement ; toute reproduction, modification, distribution ou utilisation
+commerciale est interdite sans accord écrit de l'auteur. Voir le fichier
+[`LICENSE`](./LICENSE).
+
+Contact / demandes de licence : jonathandann43@gmail.com
