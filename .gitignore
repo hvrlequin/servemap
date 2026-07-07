@@ -1,0 +1,8 @@
+# Aide au preview local (hors application)
+.serve.js
+.check.js
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>ServeMap — Plan de salle live</title>
+<style>
+/* ==========================================================================
+   ServeMap v2.1 — command center / boîte de nuit
+   Priorité : lisible en plein rush. Peu de texte, gros repères visuels,
+   une seule question à l'écran : « où je vais, quoi je fais ».
+   ========================================================================== */
+:root{
+  --bg:#08060a; --bg-2:#100c12; --room:#151019; --room-2:#1d1626;
+  --surface:rgba(28,22,36,.66); --surface-2:rgba(40,31,52,.78);
+  --border:rgba(220,190,120,.16); --border-strong:rgba(220,190,120,.32);
+  --ink:#f6efe0; --ink-dim:#c8bda6; --ink-faint:#8c8271;
+  --cyan:#22d3ee; --magenta:#ff4fd8; --violet:#a78bfa;
+  --gold:#e8c56a; --gold-2:#c9a24a;
+  --green:#22e0a0; --amber:#ffb020; --blue:#38bdf8; --red:#ff3b6b;
+  --shadow:0 18px 50px rgba(0,0,0,.55); --r:14px;
+  --font:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:var(--font); color:var(--ink);
+  background:
+    radial-gradient(1200px 700px at 12% -10%, rgba(232,197,106,.13), transparent 60%),
+    radial-gradient(1000px 700px at 100% 0%, rgba(255,79,216,.09), transparent 55%),
+    radial-gradient(900px 900px at 60% 120%, rgba(167,139,250,.09), transparent 60%),
+    var(--bg);
+  min-height:100%; -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer}
+h1,h2,h3,h4{margin:0}
+.mono{font-variant-numeric:tabular-nums}
+
+/* ---------- Header ---------- */
+header{
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:11px 18px;background:linear-gradient(180deg, rgba(8,12,24,.96), rgba(8,12,24,.78));
+  border-bottom:1px solid var(--border);backdrop-filter:blur(10px);
+}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.logo{
+  width:38px;height:38px;border-radius:11px;flex:none;
+  background:conic-gradient(from 210deg,var(--gold),#2a1e0a,var(--violet),var(--gold));
+  box-shadow:0 0 22px rgba(232,197,106,.42), inset 0 0 12px rgba(0,0,0,.5);
+  display:grid;place-items:center;font-size:20px;
+}
+.brand h1{font-size:19px;letter-spacing:.5px}
+.brand h1 b{color:var(--gold)}
+.brand .tag{font-size:11px;color:var(--ink-faint);letter-spacing:2px;text-transform:uppercase}
+.spacer{flex:1 1 auto}
+
+.identity{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border-strong);border-radius:12px;padding:6px 8px 6px 12px}
+.identity label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-faint)}
+.identity select{
+  appearance:none;background:var(--surface-2);color:var(--ink);border:1px solid var(--border);
+  border-radius:9px;padding:8px 30px 8px 11px;font-size:14px;font-weight:600;min-height:40px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--gold) 50%),linear-gradient(135deg,var(--gold) 50%,transparent 50%);
+  background-position:calc(100% - 16px) center,calc(100% - 11px) center;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+.role-badge{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:5px 10px;border-radius:999px;white-space:nowrap;border:1px solid currentColor}
+.role-commis{color:var(--blue)} .role-serveur{color:var(--green)} .role-barmaid{color:var(--violet)} .role-manager{color:var(--magenta)}
+.shift-pill{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-dim);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:7px 13px}
+.shift-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.shift-pill.closed .dot{background:var(--ink-faint);box-shadow:none}
+
+.btn{border:1px solid var(--border-strong);background:var(--surface-2);color:var(--ink);border-radius:11px;padding:10px 14px;font-size:13px;font-weight:600;min-height:42px;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{border-color:var(--gold);box-shadow:0 0 0 1px rgba(232,197,106,.3)}
+.btn.ghost{background:transparent}
+.btn.primary{background:linear-gradient(120deg,rgba(232,197,106,.26),rgba(201,162,74,.16));border-color:var(--gold);color:#fff5da}
+.btn.warn{border-color:var(--magenta);color:#ffe4fb}
+.btn.tiny{padding:7px 10px;min-height:34px;font-size:12px;border-radius:9px}
+.btn:disabled{opacity:.38;cursor:not-allowed;box-shadow:none;border-color:var(--border)}
+
+/* ---------- Layout ---------- */
+.wrap{display:flex;gap:16px;padding:16px;align-items:flex-start}
+.map-col{flex:1 1 auto;min-width:0}
+.rail{width:372px;flex:none;display:flex;flex-direction:column;gap:14px}
+@media(max-width:1080px){ .wrap{flex-direction:column} .rail{width:100%;order:-1} }
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.panel-b{padding:14px 15px}
+
+.banner{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:9px 13px;margin-bottom:12px;font-size:12.5px;color:var(--ink-dim)}
+.banner b{color:var(--ink)}
+.banner .x{margin-left:auto;background:transparent;border:none;color:var(--ink-faint);font-size:18px;width:28px;height:28px;border-radius:8px}
+.banner .x:hover{color:var(--ink);background:var(--surface-2)}
+
+/* ---------- Map ---------- */
+.map-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.map-title{display:flex;align-items:baseline;gap:12px}
+.map-title h2{font-size:17px;letter-spacing:.4px}
+.map-title span{font-size:12px;color:var(--ink-faint)}
+.legend{display:flex;gap:10px;flex-wrap:wrap}
+.legend .lg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-dim)}
+.legend .sw{width:11px;height:11px;border-radius:3px}
+
+.mapframe{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--border-strong);
+  background:radial-gradient(700px 380px at 30% 10%, rgba(34,211,238,.06), transparent 60%),
+  radial-gradient(700px 380px at 90% 90%, rgba(255,79,216,.06), transparent 60%),var(--bg-2);box-shadow:var(--shadow)}
+svg#floor{display:block;width:100%;height:auto;touch-action:none;user-select:none}
+
+.zoneRegion{fill:var(--room);stroke:var(--border);stroke-width:1.5}
+.zoneRegion.mine{stroke:rgba(232,197,106,.5)}
+.zoneLabel{fill:var(--ink-faint);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.zoneLabel.clickable{cursor:pointer} .zoneLabel.clickable:hover{fill:var(--gold)}
+.roomWall{fill:none;stroke:rgba(220,190,120,.28);stroke-width:3}
+.roomInner{fill:none;stroke:rgba(220,190,120,.08);stroke-width:1;stroke-dasharray:3 7}
+.entrance{fill:var(--green)} .entranceLabel{fill:var(--green);font-size:11px;font-weight:800;letter-spacing:2px}
+.barShape{fill:url(#barGrad);stroke:var(--violet);stroke-width:2}
+.barLabel{fill:#e9deff;font-size:13px;font-weight:800;letter-spacing:4px}
+.barStool{fill:var(--room-2);stroke:rgba(167,139,250,.5);stroke-width:1.5}
+
+.tbl{cursor:pointer;transition:opacity .25s}
+.tbl .body{stroke-width:3}
+.tbl .ring{fill:none;stroke-width:2;opacity:.45}
+.tbl .ic{text-anchor:middle;font-size:22px;fill:#fff}
+.tbl .nm{fill:var(--ink);font-size:12.5px;font-weight:700;text-anchor:middle}
+.tbl.dim{opacity:.5}
+.tbl.draggable{cursor:grab}
+.pip circle{stroke:#05070d;stroke-width:2}
+.pip text{font-size:13px;text-anchor:middle;dominant-baseline:central;font-weight:800}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes ringpulse{0%{r:40;opacity:.6}100%{r:56;opacity:0}}
+.prio .pring{stroke:var(--red);animation:ringpulse 1.7s ease-out infinite}
+.urgentpip{animation:pulse 1s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.prio .pring{animation:none}.urgentpip{animation:none}}
+
+/* ---------- Rail : identité + « à faire » ---------- */
+.idcard{display:flex;align-items:center;gap:12px}
+.avatar{width:46px;height:46px;border-radius:13px;flex:none;display:grid;place-items:center;font-weight:800;font-size:18px;background:var(--surface-2);border:1px solid var(--border-strong)}
+.idcard .who{font-size:16px;font-weight:700}
+.idcard .cap{font-size:11.5px;color:var(--ink-faint);margin-top:2px}
+.tabbody{padding:14px 15px}
+
+.headline{font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-faint);margin:2px 0 12px;display:flex;align-items:center;justify-content:space-between}
+.cnt-inline{background:var(--magenta);color:#1a0016;font-weight:800;font-size:11px;border-radius:999px;padding:2px 9px}
+
+.mcard{border:1px solid var(--border);border-left:5px solid var(--ink-faint);border-radius:14px;padding:13px 14px;margin-bottom:11px;background:var(--surface-2)}
+.mcard .mtop{display:flex;align-items:center;gap:12px}
+.mcard .micon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;flex:none}
+.mcard .mtitle{font-size:15.5px;font-weight:800;line-height:1.15}
+.mcard .mwhere{font-size:12.5px;color:var(--ink-dim);margin-top:2px}
+.mcard .mtimer{margin-left:auto;font-size:12px;color:var(--ink-faint);white-space:nowrap;align-self:flex-start}
+.mcard .msub{font-size:12.5px;color:var(--ink-dim);margin:10px 0 12px}
+.mcard .macts{display:flex;gap:9px}
+.mcard .macts .btn{flex:1;justify-content:center;min-height:46px;font-size:14px}
+.mcard .macts .btn.ghost{flex:0 0 auto}
+
+.calm{text-align:center;padding:34px 14px}
+.calm .big{font-size:42px;line-height:1}
+.calm h3{font-size:17px;margin:12px 0 6px}
+.calm p{font-size:12.5px;color:var(--ink-faint);max-width:250px;margin:0 auto;line-height:1.5}
+
+.mtoolbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.mtoolbar .btn{flex-direction:column;gap:5px;min-height:66px;font-size:11.5px;justify-content:center}
+.mtoolbar .btn .ic{font-size:21px}
+
+.list-row{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.list-row:last-child{border-bottom:none}
+.list-row .l{min-width:0} .list-row .l b{font-size:13.5px}
+.list-row .l small{display:block;color:var(--ink-faint);font-size:11px;margin-top:1px}
+.stockbar{height:6px;border-radius:4px;background:var(--bg);overflow:hidden;margin-top:5px}
+.stockbar i{display:block;height:100%;border-radius:4px}
+.stat-disponible{color:var(--green)} .stat-bientot_epuise{color:var(--amber)} .stat-indisponible{color:var(--red)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px}
+.kpi .v{font-size:22px;font-weight:800;line-height:1} .kpi .k{font-size:11px;color:var(--ink-faint);margin-top:5px}
+.muted{color:var(--ink-faint);font-size:12.5px;text-align:center;padding:16px 6px}
+.hint{font-size:11.5px;color:var(--ink-faint);line-height:1.5}
+.sect{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-faint);margin:14px 0 9px}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;z-index:80;background:rgba(3,5,12,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.on{display:flex}
+.modal{width:min(560px,100%);max-height:90vh;overflow:auto;background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--border-strong);border-radius:18px;box-shadow:var(--shadow)}
+.modal-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(12,18,36,.96);backdrop-filter:blur(6px)}
+.modal-h h3{font-size:16px}
+.modal-h .close{background:transparent;border:none;color:var(--ink-faint);font-size:24px;line-height:1;width:36px;height:36px;border-radius:9px}
+.modal-h .close:hover{color:var(--ink);background:var(--surface)}
+.modal-b{padding:18px}
+.statustag{font-size:11px;font-weight:800;letter-spacing:.5px;padding:4px 10px;border-radius:999px;text-transform:uppercase;border:1px solid currentColor}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--border-strong);border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit;min-height:44px}
+.oline{display:grid;grid-template-columns:1fr 62px 78px 30px;gap:8px;align-items:center;margin-bottom:8px}
+.oline input,.oline select{min-height:42px;padding:9px 10px;font-size:13px;width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--border-strong);border-radius:9px}
+.oline .rm{background:transparent;border:1px solid var(--border);color:var(--red);border-radius:9px;height:42px}
+.grand{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);margin-top:6px;font-size:15px}
+.grand b{font-size:22px;color:var(--gold)}
+/* sélecteur de commande par catégorie */
+.picker-tabs{display:flex;gap:6px;margin-bottom:12px}
+.picker-tabs button{flex:1;padding:9px 6px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink-dim);font-weight:700;font-size:12px;min-height:44px}
+.picker-tabs button.active{border-color:var(--gold);color:var(--gold);background:rgba(232,197,106,.10)}
+.picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.pchip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:11px 12px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);min-height:56px;position:relative}
+.pchip:hover{border-color:var(--gold)}
+.pchip b{font-size:13.5px;font-weight:700;line-height:1.15}
+.pchip small{font-size:12px;color:var(--gold)}
+.pchip:disabled{opacity:.4;cursor:not-allowed}
+.pchip:disabled small{color:var(--red)}
+.pchip .qb{position:absolute;top:7px;right:7px;background:var(--gold);color:#241a05;font-size:11px;font-weight:800;border-radius:999px;min-width:19px;text-align:center;padding:1px 5px}
+.cart{border-top:1px solid var(--border);padding-top:10px}
+.cline{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.cline:last-child{border-bottom:none}
+.cline .cn{flex:1;min-width:0} .cline .cn b{font-size:13.5px} .cline .cn small{display:block;color:var(--ink-faint);font-size:11px}
+.stepper{display:flex;align-items:center;gap:2px}
+.stepper button{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);font-size:16px;font-weight:700}
+.stepper span{min-width:26px;text-align:center;font-weight:700}
+.cline .st{width:60px;text-align:right;font-size:13px;color:var(--ink-dim);font-variant-numeric:tabular-nums}
+.cline .rm2{background:transparent;border:none;color:var(--red);font-size:18px;width:26px}
+.suggests{margin-bottom:14px}
+.sugg-row{display:flex;gap:8px;flex-wrap:wrap}
+.sugg-chip{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;border:1px dashed var(--gold);background:rgba(232,197,106,.06);color:var(--ink);font-size:12.5px;font-weight:600;min-height:40px}
+.sugg-chip:hover{background:rgba(232,197,106,.13)}
+.sugg-chip .pl{color:var(--gold);font-weight:800}
+.sugg-chip .pr{color:var(--gold);font-size:11px}
+.sugg-chip .qq{color:var(--ink-faint);font-size:11px}
+/* onglets du rail : Ma mission / Salle en direct */
+.railtabs{display:flex;gap:6px;margin-bottom:14px}
+.railtabs button{flex:1;padding:9px 6px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--ink-faint);font-weight:700;font-size:12.5px;min-height:42px}
+.railtabs button.active{border-color:var(--gold);color:var(--gold);background:rgba(232,197,106,.08)}
+.det-lines .dl{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.det-lines .dl:last-child{border-bottom:none} .det-lines .dl .q{color:var(--ink-faint)}
+.actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.actions-grid .btn{justify-content:center}
+.assignrow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:4px 0 12px;font-size:13px;color:var(--ink-dim)}
+.unassigned{color:var(--amber);font-weight:700}
+.chip{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--ink-dim)}
+.stepcard{display:flex;gap:11px;align-items:flex-start;padding:11px 12px;border:1px solid var(--border);border-radius:12px;margin-bottom:9px;background:var(--surface-2)}
+.stepcard .n{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--bg);border:1px solid var(--border-strong)}
+.stepcard.done{opacity:.55} .stepcard.done .n{background:var(--green);color:#022;border-color:var(--green)}
+.stepcard .role{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.stepcard p{margin:3px 0 0;font-size:12.5px;color:var(--ink-dim)}
+.stepcard button{margin-top:8px}
+
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:100;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{background:var(--surface-2);border:1px solid var(--border-strong);border-left:4px solid var(--cyan);color:var(--ink);padding:11px 16px;border-radius:11px;box-shadow:var(--shadow);font-size:13.5px;animation:tin .25s ease;max-width:92vw}
+.toast.err{border-left-color:var(--red)} .toast.ok{border-left-color:var(--green)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.footnote{padding:8px 18px 26px;color:var(--ink-faint);font-size:11.5px;text-align:center}
+
+/* ---------- FAB « + Commande » (toujours visible) ---------- */
+.fab{position:fixed;right:22px;bottom:24px;z-index:70;display:none;align-items:center;gap:8px;
+  padding:14px 20px;border-radius:999px;border:1px solid var(--gold);
+  background:linear-gradient(120deg,var(--gold),var(--gold-2));color:#241a05;
+  font-family:var(--font);font-size:15px;font-weight:800;letter-spacing:.2px;
+  box-shadow:0 10px 30px rgba(232,197,106,.32),0 4px 12px rgba(0,0,0,.5);transition:transform .15s,box-shadow .15s}
+.fab .plus{font-size:19px;line-height:1}
+.fab:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(232,197,106,.45)}
+.fab:active{transform:translateY(0)}
+.fab.show{display:inline-flex}
+body.modal-open .fab{display:none}
+
+/* ---------- Vue mobile (serveurs en salle) ---------- */
+.mtables{display:none}
+.mtrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-bottom:9px;color:var(--ink);min-height:58px}
+.mtrow .dot{width:13px;height:13px;border-radius:50%;flex:none}
+.mtrow .l{flex:1;min-width:0}
+.mtrow .l b{font-size:15px}
+.mtrow .l small{display:block;color:var(--ink-faint);font-size:12px;margin-top:2px}
+.mtrow .chev{color:var(--ink-faint);font-size:22px;line-height:1}
+.mobilenav{display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;gap:6px;background:rgba(14,10,18,.97);backdrop-filter:blur(12px);border-top:1px solid var(--border-strong);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+.mobilenav button{flex:1;background:transparent;border:none;color:var(--ink-faint);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:7px 4px;border-radius:12px;min-height:54px;position:relative}
+.mobilenav button.active{color:var(--gold);background:rgba(232,197,106,.10)}
+.mobilenav button .ic{font-size:19px;line-height:1}
+.mobilenav .nbadge{position:absolute;top:5px;left:calc(50% + 4px);background:var(--magenta);color:#1a0016;font-size:9px;font-weight:800;border-radius:999px;padding:1px 5px}
+@media(max-width:640px){
+  header{gap:9px;padding:10px 12px}
+  #demoBtn,#shiftPill{display:none}
+  .brand h1{font-size:17px} .brand .tag{font-size:10px}
+  .identity{padding:5px 7px 5px 10px} .identity label{display:none}
+  .identity select{font-size:13px;min-height:38px;padding:7px 28px 7px 10px}
+  .wrap{flex-direction:column;padding:10px;gap:10px;padding-bottom:78px}
+  .rail{width:100%} .banner,.legend,.footnote{display:none}
+  .map-h{margin-bottom:8px} .map-title h2{font-size:16px}
+  .mobilenav{display:flex}
+  body[data-mview="todo"] .map-col,body[data-mview="todo"] #mtables{display:none}
+  body[data-mview="map"] .rail,body[data-mview="map"] #mtables{display:none}
+  body[data-mview="tables"] .map-col,body[data-mview="tables"] .rail{display:none}
+  body[data-mview="tables"] #mtables{display:block}
+  .mcard .macts .btn{min-height:50px;font-size:15px}
+  .fab{right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px));padding:13px 18px;font-size:14px}
+  .railtabs{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">◈</div>
+    <div><h1>Serve<b>Map</b></h1><div class="tag" id="estabTag">plan de salle</div></div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn primary tiny" id="demoBtn">▶ Démo guidée</button>
+  <div class="shift-pill" id="shiftPill"><span class="dot"></span><span id="shiftText">Service en cours</span></div>
+  <div class="identity">
+    <label for="who">Je suis</label>
+    <select id="who" aria-label="Choisir l'identité"></select>
+    <span class="role-badge" id="roleBadge">—</span>
+  </div>
+  <button class="btn ghost tiny" id="resetBtn" title="Recharger les données d'exemple">↺</button>
+</header>
+
+<div class="wrap">
+  <div class="map-col">
+    <div class="banner" id="banner">
+      <span>👋 Vous voyez la vue de <b id="bWho">—</b>. Chaque employé n'a que <b>sa</b> mission. Changez de rôle en haut, ou lancez la <b>▶ Démo guidée</b>.</span>
+      <button class="x" id="bClose" title="Fermer">×</button>
+    </div>
+    <div class="map-h">
+      <div class="map-title"><h2 id="roomName">Salle</h2><span id="mapSub">—</span></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="mapframe">
+      <svg id="floor" viewBox="0 0 1000 640" role="img" aria-label="Plan de salle interactif"></svg>
+    </div>
+    <div class="footnote" id="footnote">—</div>
+  </div>
+
+  <div class="rail">
+    <div class="panel">
+      <div class="panel-b">
+        <div class="idcard">
+          <div class="avatar" id="avatar">?</div>
+          <div><div class="who" id="idName">—</div><div class="cap" id="idCap">—</div></div>
+        </div>
+      </div>
+      <div class="tabbody" id="tabbody"></div>
+    </div>
+  </div>
+  <div class="mtables panel" id="mtables"></div>
+</div>
+
+<nav class="mobilenav" id="mnav"></nav>
+<button class="fab" id="fab" title="Nouvelle commande"><span class="plus">＋</span> Commande</button>
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div id="toasts"></div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   ServeMap v2.1 — logique métier inchangée (vérifiée), UI orientée rush.
+   Toute mutation passe par `api` qui vérifie can(role, action).
+   ========================================================================== */
+/* ---------- Profil établissement (configurable — ici : Mirano) ----------
+   Le moteur est générique ; un établissement = ce bloc + le seed.
+   Pour un autre lieu : changez ESTAB + les zones/tables/produits du seed. */
+const ESTAB = {
+  name: "Mirano",
+  city: "Bruxelles",
+  kind: "club · ancien cinéma Art Déco",
+  roleLabels: { manager:"Responsable", serveur:"Serveur", commis:"Runner", barmaid:"Bar" },
+  // Vérifié (miranobrussels.com) : identité or & noir, néons, ancien cinéma (parterre + balcon).
+  // Exemples à confirmer avec le vrai plan/carte : emplacements exacts, minimums, tarifs.
+  note: "Identité or & noir calée sur Mirano (ancien cinéma Art Déco). Plan, carte & tarifs : exemples à confirmer.",
+};
+const LS_KEY = "servemap_mirano_v2";
+const now = () => Date.now();
+const uid = (p) => p + "_" + Math.random().toString(36).slice(2, 8);
+const SHIFT = "shift_soir";
+const URGENT_AT = 70, PRIORITY_AT = 150;
+
+const STATUS = {
+  libre:               { label:"Libre",       color:"#22e0a0", icon:"○" },
+  commande_en_attente: { label:"En attente",  color:"#ffb020", icon:"◔" },
+  commande_envoyee:    { label:"Envoyée",     color:"#38bdf8", icon:"➤" },
+  commande_prete:      { label:"Prête",       color:"#22d3ee", icon:"✔" },
+  servie:              { label:"Servie",      color:"#a78bfa", icon:"🍾" },
+  a_encaisser:         { label:"Addition",    color:"#ff4fd8", icon:"€" },
+  probleme_besoin_aide:{ label:"Aide",        color:"#ff5470", icon:"!" },
+  priorite_attente:    { label:"Priorité",    color:"#ff3b6b", icon:"⚡" },
+};
+const NTYPE = {
+  commande_envoyee:{ label:"Bon lancé",        icon:"➤", color:"#38bdf8" },
+  commande_prete:  { label:"Bouteille prête",  icon:"🍾", color:"#22d3ee" },
+  bouteille_servie:{ label:"Bouteille servie", icon:"🍾", color:"#a78bfa" },
+  stock_urgent:    { label:"Stock urgent",     icon:"⛔", color:"#ff3b6b" },
+  renfort_demande: { label:"Renfort demandé",  icon:"🆘", color:"#ffb020" },
+  priorite_attente:{ label:"Priorité attente", icon:"⚡", color:"#ff3b6b" },
+};
+const CAT = { bouteille:{label:"Bouteille",icon:"🍾"}, verre:{label:"Verre / coupe",icon:"🥂"}, soft:{label:"Soft / mixer",icon:"🥤"}, autre:{label:"Autre",icon:"▫"} };
+const ROLE_LABEL = ESTAB.roleLabels;
+
+/* Accords bouteille → mixers suggérés (proposés à la prise de commande) */
+const PAIRINGS = [
+  { match:/vodka|grey goose|belvedere|c[iî]roc/i, mixers:["Red Bull","Tonic Schweppes","Jus cranberry","San Pellegrino"] },
+  { match:/gin/i,                                 mixers:["Tonic Schweppes","San Pellegrino"] },
+  { match:/whisky|jack|bourbon/i,                 mixers:["Coca-Cola","San Pellegrino"] },
+  { match:/cognac|hennessy/i,                     mixers:["Coca-Cola","San Pellegrino"] },
+  { match:/tequila|patr[oó]n/i,                   mixers:["Tonic Schweppes","Jus cranberry"] },
+  { match:/champagne|dom p[eé]rignon|ruinart|mo[eë]t/i, mixers:["Coupe champagne","San Pellegrino"] },
+  { match:/rhum|rum|havana/i,                     mixers:["Coca-Cola","Tonic Schweppes"] },
+];
+function mixersFor(bottleName){ const p=PAIRINGS.find(x=>x.match.test(bottleName)); return p?p.mixers:[]; }
+
+const CAN = {
+  view_map:["commis","serveur","barmaid","manager"], view_prices:["serveur","manager"],
+  encaisser:["serveur","manager"], create_order:["serveur","manager"], edit_order:["serveur","manager"],
+  emit_commande_envoyee:["commis","manager"], emit_commande_prete:["barmaid","manager"],
+  emit_bouteille_servie:["serveur","manager"], signal_stock_urgent:["barmaid","manager"],
+  request_renfort:["commis","serveur","barmaid","manager"], request_override:["serveur"],
+  approve_override:["manager"], toggle_delegation:["manager"], edit_floorplan:["manager"],
+  manage_stock:["manager"], close_shift:["manager"], view_recap:["manager"],
+};
+function can(role, action){ return (CAN[action]||[]).includes(role); }
+
+/* ---------- Seed ---------- */
+function seed(){
+  const staff = [
+    { id:"m1", name:"Nora", role:"manager", active:true, created_by:null },
+    { id:"s1", name:"Alex", role:"serveur", active:true, created_by:"m1" },
+    { id:"s2", name:"Maya", role:"serveur", active:true, created_by:"m1" },
+    { id:"c1", name:"Sam",  role:"commis",  active:true, created_by:"m1" },
+    { id:"c2", name:"Théo", role:"commis",  active:true, created_by:"m1" },
+    { id:"b1", name:"Lea",  role:"barmaid", active:true, created_by:"m1" },
+  ];
+  const zones = [
+    { id:"z1", name:"Balcon",        x:648, y:56,  w:320, h:414 }, // balcon VIP (droite)
+    { id:"z2", name:"Loges",         x:32,  y:56,  w:584, h:150 }, // loges (haut-gauche)
+    { id:"z3", name:"Fumoir",        x:32,  y:498, w:430, h:102 }, // bas-gauche
+    { id:"z4", name:"Bar central",   x:32,  y:240, w:330, h:240 }, // colonne gauche (non assigné)
+  ];
+  const shiftAssignments = [
+    { id:"sa1", shift_id:SHIFT, server_id:"s1", commis_ids:["c1"], zone_ids:["z2","z3"], active_from:now()-3*3600e3, active_until:null }, // Alex : Loges + Fumoir
+    { id:"sa2", shift_id:SHIFT, server_id:"s2", commis_ids:["c2"], zone_ids:["z1"],      active_from:now()-3*3600e3, active_until:null }, // Maya : Carré VIP
+  ];
+  const staffPermissionOverrides = [
+    { staff_id:"s1", can_self_assign_tables:false, set_by:"m1", set_at:now()-3*3600e3 },
+    { staff_id:"s2", can_self_assign_tables:true,  set_by:"m1", set_at:now()-3*3600e3 },
+  ];
+  const tables = [
+    // Loges (Alex + runner Sam)
+    { id:"t1",  zone_id:"z2", name:"Loge A",   x:150, y:120, seats:6,  status:"commande_en_attente" },
+    { id:"t2",  zone_id:"z2", name:"Loge B",   x:330, y:120, seats:6,  status:"commande_envoyee" },
+    { id:"t3",  zone_id:"z2", name:"Loge C",   x:515, y:120, seats:6,  status:"libre" },
+    // Carré VIP (Maya + runner Théo) — minimum bouteille
+    { id:"t4",  zone_id:"z1", name:"Carré 1",  x:740, y:150, seats:8,  status:"a_encaisser",         min:500 },
+    { id:"t5",  zone_id:"z1", name:"Carré 2",  x:900, y:150, seats:10, status:"commande_prete",      min:600 },
+    { id:"t6",  zone_id:"z1", name:"Carré 3",  x:740, y:340, seats:8,  status:"commande_en_attente", min:500 },
+    { id:"t7",  zone_id:"z1", name:"Carré 4",  x:900, y:340, seats:8,  status:"libre",               min:500 },
+    // Fumoir (Alex + runner Sam)
+    { id:"t8",  zone_id:"z3", name:"Fumoir 1", x:150, y:545, seats:4,  status:"a_encaisser" },
+    { id:"t9",  zone_id:"z3", name:"Fumoir 2", x:330, y:545, seats:4,  status:"servie" },
+    // Bar central (non assigné)
+    { id:"t10", zone_id:"z4", name:"Bar 1",    x:120, y:315, seats:2,  status:"libre" },
+    { id:"t11", zone_id:"z4", name:"Bar 2",    x:250, y:330, seats:2,  status:"commande_en_attente" },
+  ];
+  const products = [
+    // Bouteilles — champagnes & spiritueux (bottle service)
+    { id:"p1",  name:"Dom Pérignon",         category:"bouteille", qty:6,   price:390 },
+    { id:"p2",  name:"Ruinart Blanc de Blancs", category:"bouteille", qty:9, price:260 },
+    { id:"p3",  name:"Moët Impérial",        category:"bouteille", qty:24,  price:180 },
+    { id:"p4",  name:"Belvedere Magnum",     category:"bouteille", qty:3,   price:480 },
+    { id:"p5",  name:"Grey Goose",           category:"bouteille", qty:22,  price:190 },
+    { id:"p6",  name:"Cîroc",                category:"bouteille", qty:10,  price:200 },
+    { id:"p7",  name:"Hennessy VS",          category:"bouteille", qty:8,   price:220 },
+    { id:"p8",  name:"Patrón Tequila",       category:"bouteille", qty:0,   price:210 },
+    { id:"p17", name:"Hendrick's Gin",       category:"bouteille", qty:12,  price:200 },
+    { id:"p18", name:"Jack Daniel's",        category:"bouteille", qty:18,  price:160 },
+    // Softs / mixers
+    { id:"p9",  name:"Red Bull",             category:"soft", qty:14,  price:9 },
+    { id:"p10", name:"Coca-Cola",            category:"soft", qty:120, price:7 },
+    { id:"p11", name:"Tonic Schweppes",      category:"soft", qty:40,  price:7 },
+    { id:"p12", name:"Jus cranberry",        category:"soft", qty:25,  price:8 },
+    { id:"p13", name:"San Pellegrino",       category:"soft", qty:60,  price:8 },
+    // Coupes / shots
+    { id:"p14", name:"Coupe champagne",      category:"verre", qty:90, price:16 },
+    { id:"p15", name:"Cocktail signature",   category:"verre", qty:80, price:18 },
+    { id:"p16", name:"Shot tequila",         category:"verre", qty:0,  price:12 },
+  ];
+  const L = (name,category,qty,unit)=>({name,category,qty,unit_price:unit,total:qty*unit});
+  const orders = [
+    { id:"o1", table_id:"t1", created_at:now()-30e3,  status:"en_attente",payment_status:"impaye",      stock_deducted:false,
+      lines:[ L("Grey Goose","bouteille",1,190), L("Red Bull","soft",6,9) ] },                                    // Loge A — Sam va lancer
+    { id:"o2", table_id:"t2", created_at:now()-70e3,  status:"envoyee",   payment_status:"impaye",      stock_deducted:false,
+      lines:[ L("Moët Impérial","bouteille",1,180), L("Red Bull","soft",4,9) ] },                                 // Loge B — au bar
+    { id:"o3", table_id:"t4", created_at:now()-320e3, status:"servie",    payment_status:"a_encaisser", stock_deducted:true,
+      lines:[ L("Dom Pérignon","bouteille",1,390), L("Grey Goose","bouteille",1,190), L("Red Bull","soft",8,9) ] },// Carré 1 — addition
+    { id:"o4", table_id:"t5", created_at:now()-190e3, status:"prete",     payment_status:"impaye",      stock_deducted:false,
+      lines:[ L("Belvedere Magnum","bouteille",1,480), L("Red Bull","soft",8,9), L("Coupe champagne","verre",6,16) ] }, // Carré 2 — attend trop
+    { id:"o5", table_id:"t6", created_at:now()-25e3,  status:"en_attente",payment_status:"impaye",      stock_deducted:false,
+      lines:[ L("Ruinart Blanc de Blancs","bouteille",1,260) ] },                                                 // Carré 3
+    { id:"o6", table_id:"t8", created_at:now()-300e3, status:"servie",    payment_status:"a_encaisser", stock_deducted:true,
+      lines:[ L("Cocktail signature","verre",2,18), L("San Pellegrino","soft",2,8) ] },                           // Fumoir 1 — addition (Alex)
+    { id:"o7", table_id:"t11",created_at:now()-15e3,  status:"en_attente",payment_status:"impaye",      stock_deducted:false,
+      lines:[ L("Coca-Cola","soft",2,7) ] },                                                                      // Bar 2 — non assigné
+  ];
+  const notifications = [
+    { id:"n3", type:"commande_prete", emitter_role:"barmaid", emitter_id:"b1", scope:"private",
+      table_id:"t5", target_user_id:"s2", assigned_server_id:"s2", assigned_commis_id:"c2",
+      message:"Magnum prêt (cierge allumé) — Carré 2", urgency:"urgent", status:"active", created_at:now()-190e3, resolved_at:null },
+    { id:"n4", type:"stock_urgent", emitter_role:"barmaid", emitter_id:"b1", scope:"broadcast",
+      table_id:null, message:"Red Bull bientôt en rupture au bar central", urgency:"normal", status:"active", created_at:now()-30e3, resolved_at:null },
+    { id:"n5", type:"renfort_demande", emitter_role:"serveur", emitter_id:"s2", scope:"zone",
+      table_id:null, target_zone_id:"z1", message:"Besoin de renfort au balcon (carrés VIP)", urgency:"normal", status:"active", created_at:now()-20e3, resolved_at:null },
+  ];
+  const tableOverrides = [
+    // Maya a pris Loge C (zone d'Alex) — l'override prime sur la zone
+    { id:"ov1", shift_id:SHIFT, table_id:"t3", server_id:"s2", previous_assignee:"z2", new_assignee:"s2",
+      created_by:"s2", approved_by:"m1", reason:"Réservation VIP transférée", created_at:now()-1800e3, active_until:null },
+  ];
+  const tableOverrideRequests = [
+    // Alex (sans délégation) demande Bar 2 (non assigné) -> le Responsable valide
+    { id:"req1", shift_id:SHIFT, table_id:"t11", requested_by:"s1", reason:"Client m'a interpellé au bar",
+      status:"pending", approved_by:null, created_at:now()-60e3, resolved_at:null },
+    { id:"req0", shift_id:SHIFT, table_id:"t4", requested_by:"s2", reason:"—",
+      status:"denied", approved_by:"m1", created_at:now()-2400e3, resolved_at:now()-2350e3 },
+  ];
+  const history = [
+    { id:"h1", table:"Loge A", total:640,  at:now()-2600e3, server:"Alex" },
+    { id:"h2", table:"Carré 4", total:1180, at:now()-2100e3, server:"Maya" },
+  ];
+  return { staff, zones, shiftAssignments, staffPermissionOverrides, tables, products,
+           orders, notifications, tableOverrides, tableOverrideRequests, history, shift:{id:SHIFT,closed:false} };
+}
+
+/* ---------- Store ---------- */
+let S, currentStaffId = "s1", currentTodos = [];
+function load(){ try{ const r=localStorage.getItem(LS_KEY); if(r){ S=JSON.parse(r); return; } }catch(e){} S=seed(); }
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+function resetDemo(){ S=seed(); escalate(); currentStaffId="s1"; save(); buildIdentitySelect(); setIdentity("s1"); toast("Démo réinitialisée","ok"); }
+
+const byId=(a,id)=>a.find(x=>x.id===id);
+const staffById=id=>byId(S.staff,id);
+const zoneById=id=>byId(S.zones,id);
+const tableById=id=>byId(S.tables,id);
+const currentStaff=()=>staffById(currentStaffId);
+function activeOrder(tid){ return S.orders.find(o=>o.table_id===tid && o.status!=="archivee" && o.payment_status!=="paye"); }
+function delegationOf(id){ const o=S.staffPermissionOverrides.find(x=>x.staff_id===id); return o?!!o.can_self_assign_tables:false; }
+
+/* ---------- Résolution d'assignation : override > zone > non assignée ---------- */
+function activeOverrideFor(tid){ return S.tableOverrides.find(o=>o.table_id===tid && (!o.active_until||o.active_until>now())); }
+function activeShiftForServer(sid){ return S.shiftAssignments.find(sa=>sa.server_id===sid && !sa.active_until); }
+function activeShiftForZone(zid){ return S.shiftAssignments.find(sa=>!sa.active_until && sa.zone_ids.includes(zid)); }
+function resolveAssignment(t){
+  const ov=activeOverrideFor(t.id);
+  if(ov){ const sa=activeShiftForServer(ov.new_assignee); return {source:"override",server_id:ov.new_assignee,commis_ids:sa?sa.commis_ids:[]}; }
+  const sa=activeShiftForZone(t.zone_id);
+  if(sa) return {source:"zone",server_id:sa.server_id,commis_ids:sa.commis_ids};
+  return {source:"unassigned",server_id:null,commis_ids:[]};
+}
+function assignLabel(t){
+  const a=resolveAssignment(t);
+  if(a.source==="unassigned") return {text:"Non assignée",unassigned:true,source:a.source,server_id:null,commis_ids:[]};
+  const srv=staffById(a.server_id);
+  const com=a.commis_ids.map(c=>{const s=staffById(c);return s?s.name:null;}).filter(Boolean).join(", ");
+  return {text:`${srv?srv.name:"?"}${com?" · "+com:""}`,unassigned:false,source:a.source,server_id:a.server_id,commis_ids:a.commis_ids};
+}
+function isMine(t){
+  const st=currentStaff(); if(!st) return false;
+  const a=resolveAssignment(t);
+  if(st.role==="manager") return true;
+  if(st.role==="serveur") return a.server_id===st.id;
+  if(st.role==="commis")  return a.commis_ids.includes(st.id);
+  return false;
+}
+function staffCoversZone(st,zid){
+  if(st.role==="manager") return true;
+  if(st.role==="serveur"){ const sa=activeShiftForServer(st.id); return !!(sa&&sa.zone_ids.includes(zid)); }
+  if(st.role==="commis"){ const sa=S.shiftAssignments.find(s=>!s.active_until&&s.commis_ids.includes(st.id)); return !!(sa&&sa.zone_ids.includes(zid)); }
+  return false;
+}
+
+/* ---------- Notifications ---------- */
+function ageSec(n){ return Math.max(0,(now()-n.created_at)/1000); }
+function computedUrgency(n){ return ageSec(n)>=URGENT_AT?"urgent":"normal"; }
+function activeNotifs(){ return S.notifications.filter(n=>n.status==="active"); }
+function notifsForTable(tid){ return activeNotifs().filter(n=>n.table_id===tid); }
+function canResolveNotif(n,st){
+  switch(n.type){
+    case "commande_envoyee": return st.role==="manager"||st.id===n.assigned_server_id;
+    case "commande_prete":   return st.role==="manager"||st.id===n.assigned_server_id;
+    case "stock_urgent":     return st.role==="barmaid"||st.role==="manager";
+    case "renfort_demande":  return ["commis","serveur","barmaid","manager"].includes(st.role);
+    case "bouteille_servie": return false;
+    case "priorite_attente": return st.role==="manager";
+    default: return false;
+  }
+}
+/* pertinence pour la file « à faire » (évite le bruit inter-zones) */
+function todoRelevant(n,st){
+  if(n._isOverrideReq) return st.role==="manager";
+  if(n.scope==="broadcast") return true;
+  if(n.scope==="zone") return st.role==="manager"||staffCoversZone(st,n.target_zone_id);
+  return st.role==="manager"||n.target_user_id===st.id||n.assigned_server_id===st.id;
+}
+function escalate(){
+  let changed=false;
+  S.tables.forEach(t=>{
+    const ord=activeOrder(t.id);
+    const open=notifsForTable(t.id).filter(n=>["commande_envoyee","commande_prete"].includes(n.type));
+    const oldest=open.reduce((m,n)=>Math.min(m,n.created_at),Infinity);
+    const overdue=(ord&&["envoyee","prete"].includes(ord.status)&&open.length&&(now()-oldest)/1000>=PRIORITY_AT);
+    if(overdue&&t.status!=="priorite_attente"){
+      t.status="priorite_attente"; changed=true;
+      if(!S.notifications.some(n=>n.type==="priorite_attente"&&n.table_id===t.id&&n.status==="active")){
+        const a=resolveAssignment(t);
+        S.notifications.push({id:uid("n"),type:"priorite_attente",emitter_role:"manager",emitter_id:"system",
+          scope:"zone",table_id:t.id,target_zone_id:t.zone_id,assigned_server_id:a.server_id,
+          assigned_commis_id:a.commis_ids[0]||null,message:`${t.name} attend depuis longtemps`,
+          urgency:"urgent",status:"active",created_at:oldest,resolved_at:null});
+        changed=true;
+      }
+    }
+  });
+  activeNotifs().forEach(n=>{ const u=computedUrgency(n); if(n.urgency!==u){ n.urgency=u; changed=true; } });
+  return changed;
+}
+function syncTableFromResolvedNotif(n){
+  if(!n.table_id) return;
+  const t=tableById(n.table_id); if(!t) return;
+  const ord=activeOrder(t.id);
+  if(n.type==="commande_envoyee"){ if(t.status==="commande_envoyee") t.status="commande_en_attente"; }
+  else if(n.type==="commande_prete"){ t.status="servie"; if(ord){ ord.status="servie"; deductStock(ord); } }
+  else if(n.type==="priorite_attente"){ t.status=ord?"servie":"libre"; }
+}
+function deductStock(order){
+  if(order.stock_deducted) return;
+  order.lines.forEach(l=>{ const p=S.products.find(x=>x.name===l.name); if(p) p.qty=Math.max(0,p.qty-l.qty); });
+  order.stock_deducted=true;
+}
+function stockStatus(q){ return q>20?"disponible":(q>0?"bientot_epuise":"indisponible"); }
+
+/* ---------- API (autorisations vérifiées ici) ---------- */
+const api = {
+  _deny(a){ toast(`⛔ 403 — « ${a} » non autorisé pour le rôle ${ROLE_LABEL[currentStaff().role]}`,"err"); return false; },
+  resolveNotif(id){
+    const n=byId(S.notifications,id); if(!n) return;
+    if(!canResolveNotif(n,currentStaff())) return this._deny("clôturer cette alerte");
+    n.status="resolved"; n.resolved_at=now(); syncTableFromResolvedNotif(n);
+    save(); renderAll(); toast(`✓ ${NTYPE[n.type].label} — réglé`,"ok");
+  },
+  emitCommandeEnvoyee(tid){
+    const st=currentStaff(); if(!can(st.role,"emit_commande_envoyee")) return this._deny("envoyer une commande");
+    const t=tableById(tid); const a=resolveAssignment(t);
+    let ord=activeOrder(tid);
+    if(!ord){ ord={id:uid("o"),table_id:tid,created_at:now(),status:"envoyee",payment_status:"impaye",stock_deducted:false,lines:[]}; S.orders.push(ord); }
+    else ord.status="envoyee";
+    t.status="commande_envoyee";
+    S.notifications.push({id:uid("n"),type:"commande_envoyee",emitter_role:st.role,emitter_id:st.id,scope:"private",
+      table_id:tid,target_user_id:a.server_id,assigned_server_id:a.server_id,assigned_commis_id:st.id,
+      message:`Commande envoyée — ${t.name}`,urgency:"normal",status:"active",created_at:now(),resolved_at:null});
+    save(); renderAll(); toast(`➤ Commande lancée — ${t.name}`,"ok");
+  },
+  emitCommandePrete(tid){
+    const st=currentStaff(); if(!can(st.role,"emit_commande_prete")) return this._deny("signaler une commande prête");
+    const t=tableById(tid); const a=resolveAssignment(t); const ord=activeOrder(tid); if(ord) ord.status="prete";
+    t.status="commande_prete";
+    S.notifications.push({id:uid("n"),type:"commande_prete",emitter_role:st.role,emitter_id:st.id,scope:"private",
+      table_id:tid,target_user_id:a.server_id,assigned_server_id:a.server_id,assigned_commis_id:a.commis_ids[0]||null,
+      message:`Commande prête — ${t.name}`,urgency:"normal",status:"active",created_at:now(),resolved_at:null});
+    save(); renderAll(); toast(`✔ ${t.name} prête — le serveur est prévenu`,"ok");
+  },
+  emitBouteilleServie(tid){
+    const st=currentStaff(); if(!can(st.role,"emit_bouteille_servie")) return this._deny("signaler bouteille servie");
+    const t=tableById(tid);
+    S.notifications.push({id:uid("n"),type:"bouteille_servie",emitter_role:st.role,emitter_id:st.id,scope:"private",
+      table_id:tid,assigned_server_id:st.id,message:`Bouteille servie — ${t.name}`,urgency:"normal",status:"resolved",created_at:now(),resolved_at:now()});
+    save(); renderAll(); toast(`🍾 Bouteille servie — ${t.name}`,"ok");
+  },
+  signalStockUrgent(msg){
+    const st=currentStaff(); if(!can(st.role,"signal_stock_urgent")) return this._deny("signaler un stock urgent");
+    S.notifications.push({id:uid("n"),type:"stock_urgent",emitter_role:st.role,emitter_id:st.id,scope:"broadcast",
+      table_id:null,message:msg||"Rupture au bar principal",urgency:"urgent",status:"active",created_at:now(),resolved_at:null});
+    save(); renderAll(); toast("⛔ Alerte stock diffusée","ok");
+  },
+  requestRenfort(zid,msg){
+    const st=currentStaff(); if(!can(st.role,"request_renfort")) return this._deny("demander du renfort");
+    S.notifications.push({id:uid("n"),type:"renfort_demande",emitter_role:st.role,emitter_id:st.id,scope:zid?"zone":"broadcast",
+      table_id:null,target_zone_id:zid||null,message:msg||"Besoin de renfort",urgency:"normal",status:"active",created_at:now(),resolved_at:null});
+    save(); renderAll(); toast("🆘 Renfort demandé","ok");
+  },
+  createOrder(tid,lines){
+    const st=currentStaff(); if(!can(st.role,"create_order")) return this._deny("créer une commande");
+    lines=lines.filter(l=>l.name&&l.qty>0); if(!lines.length){ toast("Ajoutez au moins un article","err"); return false; }
+    lines.forEach(l=>l.total=l.qty*l.unit_price);
+    let ord=activeOrder(tid);
+    if(ord) ord.lines=ord.lines.concat(lines);
+    else{ ord={id:uid("o"),table_id:tid,created_at:now(),status:"en_attente",payment_status:"impaye",stock_deducted:false,lines}; S.orders.push(ord); }
+    const t=tableById(tid); if(t.status==="libre") t.status="commande_en_attente";
+    save(); renderAll(); toast(`＋ Commande — ${t.name}`,"ok"); return true;
+  },
+  setTableStatus(tid,status){
+    const st=currentStaff();
+    if(status==="a_encaisser"&&!can(st.role,"encaisser")) return this._deny("mettre à encaisser");
+    const t=tableById(tid); t.status=status;
+    if(status==="a_encaisser"){ const o=activeOrder(tid); if(o) o.payment_status="a_encaisser"; }
+    save(); renderAll();
+  },
+  encaisser(tid){
+    const st=currentStaff(); if(!can(st.role,"encaisser")) return this._deny("encaisser");
+    const t=tableById(tid); const o=activeOrder(tid);
+    if(o){ o.payment_status="paye"; o.status="archivee"; deductStock(o);
+      S.history.unshift({id:uid("h"),table:t.name,total:orderTotal(o),at:now(),server:st.name}); }
+    S.notifications.forEach(n=>{ if(n.table_id===tid&&n.status==="active"){ n.status="resolved"; n.resolved_at=now(); } });
+    t.status="libre"; save(); renderAll(); toast(`€ Encaissé — ${t.name}`,"ok");
+  },
+  archiver(tid){
+    const t=tableById(tid); const o=activeOrder(tid);
+    if(o){ o.status="archivee"; S.history.unshift({id:uid("h"),table:t.name,total:orderTotal(o),at:now(),server:currentStaff().name}); }
+    S.notifications.forEach(n=>{ if(n.table_id===tid&&n.status==="active"){ n.status="resolved"; n.resolved_at=now(); } });
+    t.status="libre"; save(); renderAll(); toast(`Table libérée — ${t.name}`,"ok");
+  },
+  requestOverride(tid,reason){
+    const st=currentStaff(); if(!can(st.role,"request_override")) return this._deny("demander une table");
+    const auto=delegationOf(st.id);
+    const req={id:uid("req"),shift_id:SHIFT,table_id:tid,requested_by:st.id,reason:reason||"",
+      status:auto?"approved":"pending",approved_by:auto?"auto":null,created_at:now(),resolved_at:auto?now():null};
+    S.tableOverrideRequests.push(req);
+    if(auto){ this._applyOverride(req); toast("✋ Table prise (délégation active)","ok"); }
+    else{
+      S.notifications.push({id:uid("n"),type:"renfort_demande",emitter_role:st.role,emitter_id:st.id,scope:"private",
+        table_id:tid,target_user_id:"m1",message:`Demande d'assignation — ${tableById(tid).name} (${st.name})`,
+        urgency:"normal",status:"active",created_at:now(),resolved_at:null,_isOverrideReq:req.id});
+      toast("Demande envoyée au manager","ok");
+    }
+    save(); renderAll();
+  },
+  approveOverride(rid){
+    const st=currentStaff(); if(!can(st.role,"approve_override")) return this._deny("approuver une demande");
+    const req=byId(S.tableOverrideRequests,rid); if(!req||req.status!=="pending") return;
+    req.status="approved"; req.approved_by=st.id; req.resolved_at=now(); this._applyOverride(req);
+    S.notifications.forEach(n=>{ if(n._isOverrideReq===rid){ n.status="resolved"; n.resolved_at=now(); } });
+    save(); renderAll(); toast("✓ Demande approuvée","ok");
+  },
+  denyOverride(rid){
+    const st=currentStaff(); if(!can(st.role,"approve_override")) return this._deny("refuser une demande");
+    const req=byId(S.tableOverrideRequests,rid); if(!req||req.status!=="pending") return;
+    req.status="denied"; req.approved_by=st.id; req.resolved_at=now();
+    S.notifications.forEach(n=>{ if(n._isOverrideReq===rid){ n.status="resolved"; n.resolved_at=now(); } });
+    save(); renderAll(); toast("Demande refusée","ok");
+  },
+  _applyOverride(req){
+    const t=tableById(req.table_id); const prev=resolveAssignment(t);
+    S.tableOverrides.push({id:uid("ov"),shift_id:SHIFT,table_id:req.table_id,server_id:req.requested_by,
+      previous_assignee:prev.source==="unassigned"?t.zone_id:prev.server_id,new_assignee:req.requested_by,
+      created_by:req.requested_by,approved_by:req.approved_by,reason:req.reason,created_at:now(),active_until:null});
+  },
+  renameZone(zid,name){ if(!can(currentStaff().role,"edit_floorplan")) return this._deny("modifier le plan"); const z=zoneById(zid); if(z&&name.trim()) z.name=name.trim(); save(); renderAll(); },
+  moveTable(tid,x,y){ if(!can(currentStaff().role,"edit_floorplan")) return; const t=tableById(tid); if(t){ t.x=Math.round(x); t.y=Math.round(y); } save(); },
+  addTable(zid){
+    if(!can(currentStaff().role,"edit_floorplan")) return this._deny("ajouter une table");
+    const z=zoneById(zid)||S.zones[0]; const n=S.tables.filter(t=>t.zone_id===z.id).length+1;
+    S.tables.push({id:uid("t"),zone_id:z.id,name:`${z.name} ${n}`,x:z.x+z.w/2,y:z.y+z.h/2,seats:4,status:"libre"});
+    save(); renderAll(); toast(`Table ajoutée dans ${z.name} — glissez-la`,"ok");
+  },
+  adjustStock(pid,d){ if(!can(currentStaff().role,"manage_stock")) return this._deny("gérer le stock"); const p=byId(S.products,pid); if(p) p.qty=Math.max(0,p.qty+d); save(); renderAll(); },
+  toggleDelegation(sid){
+    if(!can(currentStaff().role,"toggle_delegation")) return this._deny("gérer la délégation");
+    let o=S.staffPermissionOverrides.find(x=>x.staff_id===sid);
+    if(!o){ o={staff_id:sid,can_self_assign_tables:false,set_by:currentStaffId,set_at:now()}; S.staffPermissionOverrides.push(o); }
+    o.can_self_assign_tables=!o.can_self_assign_tables; o.set_by=currentStaffId; o.set_at=now();
+    save(); renderAll(); toast(`Délégation ${o.can_self_assign_tables?"activée":"désactivée"} — ${staffById(sid).name}`,"ok");
+  },
+  closeShift(){ if(!can(currentStaff().role,"close_shift")) return this._deny("clôturer le service"); S.shiftAssignments.forEach(sa=>{ if(!sa.active_until) sa.active_until=now(); }); S.shift.closed=true; save(); renderAll(); toast("Service clôturé","ok"); },
+};
+function orderTotal(o){ return o?o.lines.reduce((s,l)=>s+l.total,0):0; }
+function tableDue(tid){ return orderTotal(activeOrder(tid)); }
+function hexA(hex,a){ const h=hex.replace("#",""); return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`; }
+
+/* ==========================================================================
+   MAP — glanceable : disque coloré + icône + nom. Focus/dim par rôle.
+   ========================================================================== */
+const svg=document.getElementById("floor");
+function svgEsc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function isFocus(t){
+  const st=currentStaff();
+  if(notifsForTable(t.id).some(n=>canResolveNotif(n,st)&&n.type!=="bouteille_servie"&&todoRelevant(n,st))) return true;
+  if(st.role==="manager") return t.status!=="libre";
+  if(st.role==="serveur"||st.role==="commis") return isMine(t);
+  if(st.role==="barmaid"){ const o=activeOrder(t.id); return !!(o&&["envoyee","en_attente","prete"].includes(o.status)); }
+  return false;
+}
+function renderMap(){
+  const st=currentStaff();
+  let out=`<defs>
+    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(167,139,250,.30)"/><stop offset="1" stop-color="rgba(167,139,250,.10)"/></linearGradient>
+    <radialGradient id="floorGrad" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="rgba(232,197,106,.18)"/><stop offset="55%" stop-color="rgba(167,139,250,.10)"/><stop offset="100%" stop-color="rgba(255,79,216,.05)"/></radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+  out+=`<rect class="roomInner" x="30" y="30" width="940" height="580" rx="20"/><rect class="roomWall" x="16" y="16" width="968" height="608" rx="22"/>`;
+  S.zones.forEach(z=>{
+    const mine=st.role!=="barmaid"&&S.tables.some(t=>t.zone_id===z.id&&isMine(t));
+    out+=`<rect class="zoneRegion ${mine?"mine":""}" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="16"/>`;
+    const clk=can(st.role,"edit_floorplan");
+    out+=`<text class="zoneLabel ${clk?"clickable":""}" x="${z.x+16}" y="${z.y+26}" ${clk?`data-zone="${z.id}"`:""}>${svgEsc(z.name)}</text>`;
+  });
+  // ---- Piste (dancefloor) décorative au centre + DJ booth ----
+  const dfx=386, dfy=238, dfw=228, dfh=198, dcx=dfx+dfw/2;
+  out+=`<rect x="${dfx}" y="${dfy}" width="${dfw}" height="${dfh}" rx="18" fill="url(#floorGrad)" stroke="rgba(232,197,106,.38)" stroke-width="1.5" filter="url(#glow)"/>`;
+  for(let gx=1;gx<4;gx++) out+=`<line x1="${dfx+gx*dfw/4}" y1="${dfy+6}" x2="${dfx+gx*dfw/4}" y2="${dfy+dfh-6}" stroke="rgba(220,190,120,.10)"/>`;
+  for(let gy=1;gy<4;gy++) out+=`<line x1="${dfx+6}" y1="${dfy+gy*dfh/4}" x2="${dfx+dfw-6}" y2="${dfy+gy*dfh/4}" stroke="rgba(220,190,120,.10)"/>`;
+  out+=`<text x="${dcx}" y="${dfy+dfh/2+6}" text-anchor="middle" fill="rgba(232,197,106,.45)" font-size="16" font-weight="800" letter-spacing="6">PARTERRE</text>`;
+  out+=`<rect x="${dcx-48}" y="${dfy-32}" width="96" height="27" rx="7" fill="rgba(167,139,250,.28)" stroke="var(--violet)" stroke-width="1.5"/>`;
+  out+=`<text x="${dcx}" y="${dfy-13}" text-anchor="middle" fill="#efe7ff" font-size="12" font-weight="800" letter-spacing="4">◗ DJ ◖</text>`;
+
+  const z4=zoneById("z4"), barX=z4.x+26, barY=z4.y+z4.h-58, barW=z4.w-52, barH=34;
+  out+=`<rect class="barShape" x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="10"/><text class="barLabel" x="${barX+barW/2}" y="${barY+barH/2+5}" text-anchor="middle">B A R</text>`;
+  for(let i=0;i<6;i++) out+=`<circle class="barStool" cx="${barX+34+i*((barW-68)/5)}" cy="${barY-14}" r="7"/>`;
+  const barAlerts=activeNotifs().filter(n=>n.type==="stock_urgent");
+  if(barAlerts.length) out+=pip(barX+barW-8,barY-6,NTYPE.stock_urgent,barAlerts.some(n=>n.urgency==="urgent"),barAlerts.length);
+  out+=`<rect class="entrance" x="700" y="618" width="170" height="6" rx="3"/><text class="entranceLabel" x="510" y="556">▸ ENTRÉE / VESTIAIRE</text>`;
+  S.zones.forEach(z=>{ const za=activeNotifs().filter(n=>n.type==="renfort_demande"&&n.target_zone_id===z.id); if(za.length) out+=pip(z.x+z.w-16,z.y+16,NTYPE.renfort_demande,true,za.length); });
+
+  const draggable=can(st.role,"edit_floorplan");
+  S.tables.forEach(t=>{
+    const sm=STATUS[t.status]||STATUS.libre, focus=isFocus(t), prio=t.status==="priorite_attente", ns=notifsForTable(t.id);
+    const cls=["tbl",focus?"":"dim",prio?"prio":"",draggable?"draggable":""].join(" ");
+    out+=`<g class="${cls}" data-table="${t.id}" transform="translate(${t.x},${t.y})">`;
+    if(prio) out+=`<circle class="pring ring" r="40" stroke="${sm.color}"/>`;
+    out+=`<circle class="ring" r="34" stroke="${sm.color}"/>`;
+    out+=`<circle class="body" r="30" fill="rgba(9,14,28,.95)" stroke="${sm.color}" filter="${focus?'url(#glow)':''}"/>`;
+    out+=`<text class="ic" y="8">${sm.icon}</text>`;
+    out+=`<text class="nm" y="52">${svgEsc(t.name)}</text>`;
+    if(ns.length) out+=pip(26,-26,NTYPE[ns[0].type],ns.some(n=>n.urgency==="urgent"),ns.length);
+    out+=`</g>`;
+  });
+  svg.innerHTML=out; bindMapEvents(); renderLegend();
+  const active=S.tables.filter(t=>t.status!=="libre").length;
+  document.getElementById("mapSub").textContent=`${S.tables.length} tables · ${active} actives · ${activeNotifs().length} alertes live`;
+}
+function pip(x,y,meta,urgent,count){
+  return `<g class="pip ${urgent?'urgentpip':''}" transform="translate(${x},${y})" pointer-events="none"><circle r="13" fill="${meta.color}"/><text y="1" fill="#05070d">${count>1?count:meta.icon}</text></g>`;
+}
+function renderLegend(){
+  const keys=["libre","commande_en_attente","commande_prete","servie","a_encaisser","priorite_attente"];
+  document.getElementById("legend").innerHTML=keys.map(k=>{const m=STATUS[k];return `<span class="lg"><span class="sw" style="background:${m.color}"></span>${m.label}</span>`;}).join("");
+}
+
+/* ---- drag (manager) / clic ---- */
+let dragState=null;
+function clientToSvg(cx,cy){ const p=svg.createSVGPoint(); p.x=cx; p.y=cy; const m=svg.getScreenCTM(); if(!m) return {x:0,y:0}; const q=p.matrixTransform(m.inverse()); return {x:q.x,y:q.y}; }
+function bindMapEvents(){
+  svg.querySelectorAll("[data-zone]").forEach(el=>el.addEventListener("click",e=>{ e.stopPropagation(); openRenameZone(el.getAttribute("data-zone")); }));
+  svg.querySelectorAll("[data-table]").forEach(g=>{
+    const id=g.getAttribute("data-table");
+    g.addEventListener("pointerdown",e=>{
+      const draggable=can(currentStaff().role,"edit_floorplan"); const p=clientToSvg(e.clientX,e.clientY);
+      dragState={id,moved:false,startX:p.x,startY:p.y,draggable,g,lastX:null,lastY:null};
+      if(draggable){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
+    });
+    g.addEventListener("pointermove",e=>{
+      if(!dragState||dragState.id!==id) return;
+      const p=clientToSvg(e.clientX,e.clientY);
+      if(Math.abs(p.x-dragState.startX)>4||Math.abs(p.y-dragState.startY)>4) dragState.moved=true;
+      if(dragState.draggable&&dragState.moved){ const x=Math.max(60,Math.min(940,p.x)),y=Math.max(60,Math.min(580,p.y)); g.setAttribute("transform",`translate(${x},${y})`); dragState.lastX=x; dragState.lastY=y; }
+    });
+    const end=()=>{
+      if(!dragState||dragState.id!==id) return;
+      if(dragState.draggable&&dragState.moved&&dragState.lastX!=null) api.moveTable(id,dragState.lastX,dragState.lastY);
+      else if(!dragState.moved) openTableDetail(id);
+      dragState=null;
+    };
+    g.addEventListener("pointerup",end); g.addEventListener("pointercancel",end);
+  });
+}
+
+/* ==========================================================================
+   RAIL — « à faire maintenant » (staff) / console (manager)
+   ========================================================================== */
+let railTab = "mission";
+function renderRail(){
+  const st=currentStaff();
+  document.getElementById("avatar").textContent=st.name[0];
+  document.getElementById("idName").textContent=st.name;
+  document.getElementById("idCap").textContent=capabilityLine(st.role);
+  document.getElementById("bWho").textContent=`${st.name} — ${ROLE_LABEL[st.role]}`;
+  currentTodos=[];
+  const tabs=[["mission",st.role==="manager"?"⚡ Console":"⚡ Ma mission"],["salle","👁 Salle en direct"]];
+  const tabsHtml=`<div class="railtabs">${tabs.map(([v,l])=>`<button data-rt="${v}" class="${railTab===v?"active":""}">${l}</button>`).join("")}</div>`;
+  const content = railTab==="salle" ? viewSalle() : (st.role==="manager"?viewManager(st):viewStaff(st));
+  const body=document.getElementById("tabbody");
+  body.innerHTML = tabsHtml + content;
+  body.querySelectorAll("[data-rt]").forEach(b=>b.addEventListener("click",()=>{ railTab=b.getAttribute("data-rt"); renderRail(); }));
+  bindRail();
+}
+function capabilityLine(role){
+  return ({ commis:"Tu montes les bouteilles. Ton serveur te dit où.",
+    serveur:"Tes carrés & loges, d'un coup d'œil. On te dit où aller.",
+    barmaid:"La file du bar. Un tap = bouteille prête (cierge).",
+    manager:"Vue d'ensemble + console. Sans fliquer ton équipe." })[role]||"";
+}
+function buildTodos(st){
+  const todos=[];
+  activeNotifs().forEach(n=>{
+    if(n.type==="bouteille_servie"||n._isOverrideReq) return;
+    if(!canResolveNotif(n,st)||!todoRelevant(n,st)) return;
+    todos.push(todoFromNotif(n,st));
+  });
+  if(st.role==="serveur"){
+    S.tables.filter(t=>isMine(t)&&t.status==="a_encaisser").forEach(t=>{
+      if(todos.some(td=>td.tableId===t.id)) return;
+      todos.push({tableId:t.id,color:STATUS.a_encaisser.color,icon:"€",title:"À encaisser",where:t.name,since:null,
+        sub:`Total ${tableDue(t.id)}€ — encaisse et libère la table`,primary:{label:"Encaisser",act:()=>api.encaisser(t.id)}});
+    });
+  }
+  if(st.role==="commis"){
+    S.tables.filter(t=>isMine(t)&&t.status==="commande_en_attente"&&activeOrder(t.id)&&activeOrder(t.id).status==="en_attente").forEach(t=>{
+      if(todos.some(td=>td.tableId===t.id)) return;
+      todos.push({tableId:t.id,color:STATUS.commande_envoyee.color,icon:"➤",title:"Bon à lancer",where:t.name,since:activeOrder(t.id).created_at,
+        sub:"Transmets le bon au bar",primary:{label:"Envoyer au bar",act:()=>api.emitCommandeEnvoyee(t.id)}});
+    });
+  }
+  if(st.role==="barmaid"){
+    S.tables.filter(t=>{const o=activeOrder(t.id);return o&&o.status==="envoyee";}).forEach(t=>{
+      if(todos.some(td=>td.tableId===t.id)) return;
+      todos.push({tableId:t.id,color:STATUS.commande_prete.color,icon:"🍾",title:"Bouteille à préparer",where:t.name,since:activeOrder(t.id).created_at,
+        sub:"Prépare (cierge) puis signale au serveur",primary:{label:"Prête ✓",act:()=>api.emitCommandePrete(t.id)}});
+    });
+  }
+  if(st.role==="commis"){
+    // le runner VOIT « bouteille prête » de son binôme (info, sans pouvoir la clôturer)
+    activeNotifs().forEach(n=>{
+      if(n.type!=="commande_prete"||n.assigned_commis_id!==st.id) return;
+      if(todos.some(td=>td.notifId===n.id)) return;
+      const t=tableById(n.table_id);
+      todos.push({tableId:n.table_id,notifId:n.id,readonly:true,color:NTYPE.commande_prete.color,icon:"🍾",since:n.created_at,
+        title:"Bouteille prête",where:t?t.name:"Salle",sub:"Le bar a sorti la commande — va aider à la monter",info:"Le serveur clôture"});
+    });
+  }
+  todos.sort((a,b)=>(a.since||now())-(b.since||now()));
+  return todos;
+}
+function todoFromNotif(n,st){
+  const t=n.table_id?tableById(n.table_id):null, z=n.target_zone_id?zoneById(n.target_zone_id):(t?zoneById(t.zone_id):null), m=NTYPE[n.type];
+  const com=n.assigned_commis_id?staffById(n.assigned_commis_id):null;
+  const map={
+    commande_prete:{title:"Bouteille prête",sub:`Récupère au bar (cierge allumé) et monte-la${com?` — avec ${com.name}`:""}`,label:"Servie ✓"},
+    commande_envoyee:{title:"Bon lancé",sub:"Le runner a passé le bon — prends le relais",label:"Je gère ✓"},
+    renfort_demande:{title:"Renfort demandé",sub:n.message,label:"J'y vais ✓"},
+    stock_urgent:{title:"Stock urgent",sub:n.message,label:"C'est réglé ✓"},
+    priorite_attente:{title:"Table prioritaire",sub:"Attente trop longue — passe au carré",label:"Pris en charge ✓"},
+  }[n.type]||{title:m.label,sub:n.message,label:"OK ✓"};
+  return {tableId:n.table_id,notifId:n.id,color:m.color,icon:m.icon,since:n.created_at,title:map.title,
+    where:t?t.name:(z?z.name:"Salle"),sub:map.sub,primary:{label:map.label,act:()=>api.resolveNotif(n.id)}};
+}
+function todoCard(td,i){
+  const voir = td.tableId?`<button class="btn ghost" data-open="${td.tableId}">Voir</button>`:"";
+  const action = td.readonly
+    ? `<div class="macts"><span class="chip" style="flex:1;text-align:center;padding:11px 8px">🔔 ${svgEsc(td.info||"En cours")}</span>${voir}</div>`
+    : `<div class="macts"><button class="btn primary" data-todo="${i}" style="flex:1">${svgEsc(td.primary.label)}</button>${voir}</div>`;
+  return `<div class="mcard" style="border-left-color:${td.color}${td.readonly?";opacity:.9":""}">
+    <div class="mtop">
+      <div class="micon" style="background:${hexA(td.color,.16)};color:${td.color}">${td.icon}</div>
+      <div style="min-width:0"><div class="mtitle">${svgEsc(td.title)}</div><div class="mwhere">📍 ${svgEsc(td.where)}</div></div>
+      ${td.since?`<div class="mtimer js-timer" data-since="${td.since}">•</div>`:""}
+    </div>
+    <div class="msub">${svgEsc(td.sub)}</div>
+    ${action}</div>`;
+}
+function viewStaff(st){
+  currentTodos=buildTodos(st);
+  const n=currentTodos.length;
+  let h=`<div class="headline"><span>À faire maintenant</span>${n?`<span class="cnt-inline">${n}</span>`:""}</div>`;
+  if(!n){
+    h+=`<div class="calm"><div class="big">✓</div><h3>Rien d'urgent</h3><p>Profite du calme. ServeMap te prévient dès qu'on a besoin de toi — pas besoin de checker.</p></div>`;
+  } else {
+    h+=currentTodos.map((td,i)=>todoCard(td,i)).join("");
+  }
+  const foot=[];
+  if(can(st.role,"request_renfort")) foot.push(`<button class="btn warn" data-act="renfort" style="flex:1;justify-content:center">🆘 Renfort</button>`);
+  if(st.role==="barmaid") foot.push(`<button class="btn" data-act="stock" style="flex:1;justify-content:center">⛔ Stock</button>`);
+  if(foot.length) h+=`<div style="margin-top:8px;display:flex;gap:8px">${foot.join("")}</div>`;
+  if(st.role==="serveur"){
+    const un=S.tables.filter(t=>resolveAssignment(t).source==="unassigned");
+    if(un.length) h+=`<p class="hint" style="margin-top:12px;text-align:center">${un.length} table(s) non assignée(s) — touche-la sur la map pour la prendre.</p>`;
+  }
+  return h;
+}
+function viewManager(st){
+  const pend=S.tableOverrideRequests.filter(r=>r.status==="pending");
+  let h=`<div class="headline"><span>À valider</span>${pend.length?`<span class="cnt-inline">${pend.length}</span>`:""}</div>`;
+  if(!pend.length){
+    h+=`<div class="calm" style="padding:20px"><div class="big" style="font-size:32px">✓</div><h3 style="font-size:15px">Rien à valider</h3><p>Ton équipe tourne. Ouvre le récap quand tu veux.</p></div>`;
+  } else {
+    h+=pend.map(r=>{ const t=tableById(r.table_id),s=staffById(r.requested_by);
+      return `<div class="mcard" style="border-left-color:${NTYPE.renfort_demande.color}">
+        <div class="mtop"><div class="micon" style="background:${hexA(NTYPE.renfort_demande.color,.16)};color:${NTYPE.renfort_demande.color}">✋</div>
+        <div><div class="mtitle">${s.name} veut ${svgEsc(t.name)}</div><div class="mwhere">${svgEsc(r.reason||"—")}</div></div></div>
+        <div class="macts"><button class="btn primary" data-act="appr" data-r="${r.id}">Approuver</button><button class="btn ghost" data-act="deny" data-r="${r.id}">Refuser</button></div></div>`;
+    }).join("");
+  }
+  const urg=activeNotifs().filter(n=>n.urgency==="urgent");
+  if(urg.length) h+=`<p class="hint" style="margin:4px 0 0;text-align:center">⚡ ${urg.length} alerte(s) urgente(s) en salle — visibles sur la map.</p>`;
+  h+=`<div class="headline" style="margin-top:16px"><span>Console patron</span></div>
+    <div class="mtoolbar">
+      <button class="btn" data-act="mrecap"><span class="ic">📊</span>Récap</button>
+      <button class="btn" data-act="mstock"><span class="ic">📦</span>Stock</button>
+      <button class="btn" data-act="mteam"><span class="ic">👥</span>Équipe & plan</button>
+    </div>`;
+  return h;
+}
+function salleTotal(){ return S.tables.reduce((s,t)=>s+tableDue(t.id),0); }
+function viewSalle(){
+  const st=currentStaff(), showP=can(st.role,"view_prices");
+  const active=S.tables.filter(t=>t.status!=="libre"), alerts=activeNotifs().length;
+  let h=`<div class="headline"><span>Salle en direct</span><span class="cnt-inline">${active.length}</span></div>`;
+  h+=`<p class="hint" style="margin:-6px 0 12px">Vue commune — ce que toute l'équipe voit en temps réel. Touchez une table pour voir sa commande.</p>`;
+  h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <span class="chip">${active.length} tables actives</span>
+      <span class="chip">${alerts} alerte${alerts>1?"s":""}</span>
+      ${showP?`<span class="chip" style="color:var(--gold);border-color:rgba(232,197,106,.4)">${salleTotal()}€ en salle</span>`:""}</div>`;
+  let any=false;
+  S.zones.forEach(z=>{
+    const zt=active.filter(t=>t.zone_id===z.id); if(!zt.length) return; any=true;
+    h+=`<div class="sect">${svgEsc(z.name)}</div>`;
+    zt.forEach(t=>{ const sm=STATUS[t.status],a=assignLabel(t),due=tableDue(t.id),ns=notifsForTable(t.id);
+      h+=`<button class="mtrow" data-open="${t.id}"><span class="dot" style="background:${sm.color}"></span>
+        <span class="l"><b>${svgEsc(t.name)}</b><small>${sm.icon} ${sm.label} · ${a.unassigned?"⚠ non assignée":svgEsc(a.text)}${due>0&&showP?" · "+due+"€":""}</small></span>
+        ${ns.length?`<span class="chip" style="color:${NTYPE[ns[0].type].color};border-color:${hexA(NTYPE[ns[0].type].color,.4)}">${ns.length}⚡</span>`:""}
+        <span class="chev">›</span></button>`;
+    });
+  });
+  if(!any) h+=`<div class="muted">Salle calme — aucune table active. 🎉</div>`;
+  return h;
+}
+function bindRail(){
+  const body=document.getElementById("tabbody");
+  body.querySelectorAll("[data-todo]").forEach(b=>b.addEventListener("click",()=>{ const td=currentTodos[+b.getAttribute("data-todo")]; if(td&&td.primary) td.primary.act(); }));
+  body.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>openTableDetail(b.getAttribute("data-open"))));
+  body.querySelectorAll("[data-act]").forEach(b=>{
+    const act=b.getAttribute("data-act");
+    b.addEventListener("click",()=>{
+      if(act==="renfort") openRenfort();
+      else if(act==="stock") openStockUrgent();
+      else if(act==="appr") api.approveOverride(b.getAttribute("data-r"));
+      else if(act==="deny") api.denyOverride(b.getAttribute("data-r"));
+      else if(act==="mrecap") openRecapModal();
+      else if(act==="mstock") openStockModal();
+      else if(act==="mteam") openTeamModal();
+    });
+  });
+}
+
+/* ==========================================================================
+   Modales
+   ========================================================================== */
+const overlay=document.getElementById("overlay"), modal=document.getElementById("modal");
+function openModal(html){ modal.innerHTML=html; overlay.classList.add("on"); document.body.classList.add("modal-open"); }
+function closeModal(){ overlay.classList.remove("on"); modal.innerHTML=""; document.body.classList.remove("modal-open"); }
+overlay.addEventListener("click",e=>{ if(e.target===overlay) closeModal(); });
+function modalHead(title,right){ return `<div class="modal-h"><h3>${title}</h3><div style="display:flex;align-items:center;gap:10px">${right||""}<button class="close" data-close>×</button></div></div>`; }
+function bindClose(){ modal.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeModal)); }
+
+function openTableDetail(tid){
+  const st=currentStaff(), t=tableById(tid), sm=STATUS[t.status], a=assignLabel(t), o=activeOrder(tid), showPrice=can(st.role,"view_prices"), z=zoneById(t.zone_id);
+  let lines = (o&&o.lines.length)
+    ? `<div class="det-lines">${o.lines.map(l=>`<div class="dl"><span>${CAT[l.category].icon} ${svgEsc(l.name)} <span class="q">×${l.qty}</span></span><span>${showPrice?l.total+"€":"•••"}</span></div>`).join("")}<div class="dl"><b>Total</b><b style="color:var(--gold)">${showPrice?orderTotal(o)+"€":"•••"}</b></div></div>`
+    : `<p class="hint">Aucune commande active sur cette table.</p>`;
+  let acts=[];
+  if(can(st.role,"create_order")) acts.push(`<button class="btn primary" data-a="neworder">＋ Nouvelle commande</button>`);
+  if(o&&can(st.role,"emit_bouteille_servie")) acts.push(`<button class="btn" data-a="servie">🍾 Bouteille servie</button>`);
+  if(o&&can(st.role,"encaisser")&&t.status!=="a_encaisser") acts.push(`<button class="btn warn" data-a="aencaisser">€ À encaisser</button>`);
+  if(o&&can(st.role,"encaisser")&&t.status==="a_encaisser") acts.push(`<button class="btn primary" data-a="encaisser">✓ Encaisser & libérer</button>`);
+  if(st.role==="commis"&&can(st.role,"emit_commande_envoyee")) acts.push(`<button class="btn primary" data-a="envoyee">➤ Envoyer au bar</button>`);
+  if(st.role==="barmaid"&&can(st.role,"emit_commande_prete")) acts.push(`<button class="btn primary" data-a="prete">✔ Signaler prête</button>`);
+  if(o) acts.push(`<button class="btn ghost" data-a="archiver">🗄 Archiver</button>`);
+  notifsForTable(tid).forEach(n=>{ if(canResolveNotif(n,st)) acts.push(`<button class="btn" data-a="resolve" data-n="${n.id}">✓ ${NTYPE[n.type].label}</button>`); });
+  if(st.role==="serveur"&&a.server_id!==st.id) acts.push(`<button class="btn" data-a="take">✋ Prendre cette table</button>`);
+  openModal(`${modalHead(svgEsc(t.name),`<span class="statustag" style="color:${sm.color}">${sm.icon} ${sm.label}</span>`)}
+    <div class="modal-b">
+      <div class="assignrow"><span>${svgEsc(z.name)} · ${t.seats} places${t.min?` · <span style="color:var(--amber)">min. ${t.min}€</span>`:""}</span><span>·</span>
+        <span class="${a.unassigned?'unassigned':''}">${a.unassigned?"⚠ Non assignée":("Assignée : "+a.text)}</span>
+        ${a.source==="override"?`<span class="chip">override</span>`:a.source==="zone"?`<span class="chip">zone</span>`:""}</div>
+      ${lines}
+      ${!showPrice?`<p class="hint">🔒 Prix & encaissement réservés au serveur/manager.</p>`:""}
+      <div class="actions-grid">${acts.join("")||`<p class="hint">Rien à faire ici pour ton rôle — c'est déjà géré.</p>`}</div>
+    </div>`);
+  bindClose();
+  modal.querySelectorAll("[data-a]").forEach(b=>{ const a2=b.getAttribute("data-a");
+    b.addEventListener("click",()=>{
+      if(a2==="neworder"){ openNewOrder(tid); return; }
+      if(a2==="take"){ closeModal(); openTakeTable(tid); return; }
+      if(a2==="servie") api.emitBouteilleServie(tid);
+      else if(a2==="aencaisser") api.setTableStatus(tid,"a_encaisser");
+      else if(a2==="encaisser") api.encaisser(tid);
+      else if(a2==="envoyee") api.emitCommandeEnvoyee(tid);
+      else if(a2==="prete") api.emitCommandePrete(tid);
+      else if(a2==="archiver") api.archiver(tid);
+      else if(a2==="resolve") api.resolveNotif(b.getAttribute("data-n"));
+      closeModal();
+    });
+  });
+}
+
+function openNewOrder(presetTable){
+  const st=currentStaff(); if(!can(st.role,"create_order")){ toast("Réservé au serveur / manager","err"); return; }
+  const assignable=S.tables.filter(t=>{const a=resolveAssignment(t);return st.role==="manager"||a.server_id===st.id||a.source==="unassigned";});
+  const opts=presetTable?S.tables:(assignable.length?assignable:S.tables);
+  let tid=presetTable||(opts[0]&&opts[0].id)||S.tables[0].id;
+  let cat="bouteille";
+  const cart={};      // productId -> qty
+  const customs=[];   // {name, price, qty}
+  const CATTABS=[["bouteille","🍾 Bouteilles"],["verre","🥂 Verres"],["soft","🥤 Softs"],["autre","✎ Autre"]];
+  const total=()=>{ let t=0; for(const pid in cart){ const p=byId(S.products,pid); if(p) t+=p.price*cart[pid]; } customs.forEach(c=>t+=c.price*c.qty); return t; };
+  const count=()=>{ let n=0; for(const k in cart) n+=cart[k]; customs.forEach(c=>n+=c.qty); return n; };
+  function suggestedMixers(){
+    const bottles=Object.keys(cart).map(pid=>byId(S.products,pid)).filter(p=>p&&p.category==="bouteille");
+    const names=new Set(); bottles.forEach(b=>mixersFor(b.name).forEach(m=>names.add(m)));
+    return [...names].map(nm=>S.products.find(p=>p.name===nm)).filter(p=>p&&p.qty>0);
+  }
+
+  function render(){
+    const tableSel=`<select id="noTable">${opts.map(t=>`<option value="${t.id}" ${t.id===tid?"selected":""}>${t.name} — ${zoneById(t.zone_id).name}</option>`).join("")}</select>`;
+    const tabs=CATTABS.map(([k,l])=>`<button data-cat="${k}" class="${cat===k?"active":""}">${l}</button>`).join("");
+    let grid;
+    if(cat==="autre"){
+      grid=`<div style="display:grid;grid-template-columns:1fr 82px auto;gap:8px;margin-bottom:14px">
+        <input id="cName" placeholder="Nom de l'article" style="background:var(--bg);color:var(--ink);border:1px solid var(--border-strong);border-radius:9px;padding:10px;min-height:44px">
+        <input id="cPrice" type="number" min="0" inputmode="numeric" placeholder="€" style="background:var(--bg);color:var(--ink);border:1px solid var(--border-strong);border-radius:9px;padding:10px;min-height:44px">
+        <button class="btn" id="cAdd" style="min-height:44px">Ajouter</button></div>`;
+    } else {
+      const items=S.products.filter(p=>p.category===cat);
+      grid=`<div class="picker-grid">${items.map(p=>{ const out=p.qty<=0,q=cart[p.id]||0;
+        return `<button class="pchip" data-add="${p.id}" ${out?"disabled":""}><b>${svgEsc(p.name)}</b><small>${out?"épuisé":p.price+"€"}</small>${q?`<span class="qb">${q}</span>`:""}</button>`;
+      }).join("")}</div>`;
+    }
+    const lines=[];
+    for(const pid in cart){ const p=byId(S.products,pid); if(p) lines.push({key:"p:"+pid,name:p.name,cat:p.category,price:p.price,qty:cart[pid]}); }
+    customs.forEach((c,i)=>lines.push({key:"c:"+i,name:c.name||"Article",cat:"autre",price:c.price,qty:c.qty}));
+    const cartHtml=lines.length ? lines.map(l=>`<div class="cline">
+        <div class="cn"><b>${CAT[l.cat].icon} ${svgEsc(l.name)}</b><small>${l.price}€ / u</small></div>
+        <div class="stepper"><button data-dec="${l.key}">−</button><span>${l.qty}</span><button data-inc="${l.key}">＋</button></div>
+        <div class="st">${l.price*l.qty}€</div><button class="rm2" data-rmk="${l.key}">×</button></div>`).join("")
+      : `<p class="hint" style="text-align:center;padding:14px 4px">Touchez un produit pour l'ajouter à la commande.</p>`;
+    const sugg=suggestedMixers();
+    const suggHtml=sugg.length?`<div class="suggests"><div class="sect" style="margin:2px 0 8px">💡 Suggestions pour ta bouteille</div>
+      <div class="sugg-row">${sugg.map(p=>`<button class="sugg-chip" data-add="${p.id}"><span class="pl">＋</span> ${svgEsc(p.name)} <span class="pr">${p.price}€</span>${cart[p.id]?`<span class="qq">×${cart[p.id]}</span>`:""}</button>`).join("")}</div></div>`:"";
+    openModal(`${modalHead("Nouvelle commande")}<div class="modal-b">
+      <div class="field"><label>Table</label>${tableSel}</div>
+      <div class="picker-tabs">${tabs}</div>
+      ${grid}
+      ${suggHtml}
+      <div class="cart"><div class="headline" style="margin:0 0 8px"><span>La commande</span>${count()?`<span class="cnt-inline">${count()}</span>`:""}</div>${cartHtml}</div>
+      <div class="grand"><span>Total</span><b>${total()}€</b></div>
+      <div style="display:flex;gap:10px"><button class="btn ghost" data-close style="flex:1">Annuler</button>
+        <button class="btn primary" id="saveOrder" style="flex:2" ${count()?"":"disabled"}>Enregistrer${count()?` · ${total()}€`:""}</button></div>
+    </div>`);
+    bindClose();
+    modal.querySelector("#noTable").addEventListener("change",e=>{ tid=e.target.value; });
+    modal.querySelectorAll("[data-cat]").forEach(b=>b.addEventListener("click",()=>{ cat=b.getAttribute("data-cat"); render(); }));
+    modal.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>{ const pid=b.getAttribute("data-add"); cart[pid]=(cart[pid]||0)+1; render(); }));
+    modal.querySelectorAll("[data-inc]").forEach(b=>b.addEventListener("click",()=>{ step(b.getAttribute("data-inc"),1); render(); }));
+    modal.querySelectorAll("[data-dec]").forEach(b=>b.addEventListener("click",()=>{ step(b.getAttribute("data-dec"),-1); render(); }));
+    modal.querySelectorAll("[data-rmk]").forEach(b=>b.addEventListener("click",()=>{ rmKey(b.getAttribute("data-rmk")); render(); }));
+    const cAdd=modal.querySelector("#cAdd");
+    if(cAdd) cAdd.addEventListener("click",()=>{ const n=modal.querySelector("#cName").value.trim(),pr=Math.max(0,+modal.querySelector("#cPrice").value||0); if(n){ customs.push({name:n,price:pr,qty:1}); render(); } else toast("Nomme l'article","err"); });
+    modal.querySelector("#saveOrder").addEventListener("click",()=>{
+      const target=modal.querySelector("#noTable").value, orderLines=[];
+      for(const pid in cart){ const p=byId(S.products,pid); if(p&&cart[pid]>0) orderLines.push({name:p.name,category:p.category,qty:cart[pid],unit_price:p.price}); }
+      customs.forEach(c=>{ if(c.qty>0&&c.name) orderLines.push({name:c.name,category:"autre",qty:c.qty,unit_price:c.price}); });
+      if(api.createOrder(target,orderLines)) closeModal();
+    });
+    function step(key,d){
+      if(key[0]==="p"){ const pid=key.slice(2); cart[pid]=(cart[pid]||0)+d; if(cart[pid]<=0) delete cart[pid]; }
+      else { const i=+key.slice(2); if(customs[i]){ customs[i].qty+=d; if(customs[i].qty<=0) customs.splice(i,1); } }
+    }
+    function rmKey(key){ if(key[0]==="p") delete cart[key.slice(2)]; else customs.splice(+key.slice(2),1); }
+  }
+  render();
+}
+
+function openTakeTable(tid){
+  const st=currentStaff(); if(!can(st.role,"request_override")){ toast("Seul un serveur peut demander une table","err"); return; }
+  const t=tableById(tid), auto=delegationOf(st.id);
+  openModal(`${modalHead("Prendre "+svgEsc(t.name))}<div class="modal-b">
+    <p class="hint" style="margin-bottom:12px">${auto?"✓ Ta délégation est active : la table t'est assignée immédiatement.":"Ta demande part au manager pour validation."}</p>
+    <div class="field"><label>Motif (optionnel)</label><input id="ovReason" placeholder="Ex : le client m'a interpellé"></div>
+    <div style="display:flex;gap:10px"><button class="btn ghost" data-close style="flex:1">Annuler</button><button class="btn primary" id="ovGo" style="flex:2">${auto?"Prendre la table":"Envoyer la demande"}</button></div>
+  </div>`);
+  bindClose();
+  modal.querySelector("#ovGo").addEventListener("click",()=>{ api.requestOverride(tid,modal.querySelector("#ovReason").value); closeModal(); });
+}
+function openRenameZone(zid){
+  const z=zoneById(zid);
+  openModal(`${modalHead("Renommer la zone")}<div class="modal-b">
+    <div class="field"><label>Nom de la zone</label><input id="zName" value="${svgEsc(z.name)}"></div>
+    <div style="display:flex;gap:10px"><button class="btn ghost" data-close style="flex:1">Annuler</button><button class="btn primary" id="zGo" style="flex:2">Enregistrer</button></div></div>`);
+  bindClose();
+  modal.querySelector("#zGo").addEventListener("click",()=>{ api.renameZone(zid,modal.querySelector("#zName").value); closeModal(); });
+}
+function openRenfort(){
+  const zoneOpts=`<option value="">Toute la salle (broadcast)</option>`+S.zones.map(z=>`<option value="${z.id}">${z.name}</option>`).join("");
+  openModal(`${modalHead("Demander du renfort")}<div class="modal-b">
+    <div class="field"><label>Zone concernée</label><select id="rfZone">${zoneOpts}</select></div>
+    <div class="field"><label>Message</label><input id="rfMsg" placeholder="Ex : besoin de renfort terrasse"></div>
+    <div style="display:flex;gap:10px"><button class="btn ghost" data-close style="flex:1">Annuler</button><button class="btn primary" id="rfGo" style="flex:2">Diffuser</button></div></div>`);
+  bindClose();
+  modal.querySelector("#rfGo").addEventListener("click",()=>{ api.requestRenfort(modal.querySelector("#rfZone").value||null,modal.querySelector("#rfMsg").value); closeModal(); });
+}
+function openStockUrgent(){
+  openModal(`${modalHead("Signaler un stock urgent")}<div class="modal-b">
+    <div class="field"><label>Message</label><input id="suMsg" placeholder="Ex : plus de glaçons au bar principal"></div>
+    <div style="display:flex;gap:10px"><button class="btn ghost" data-close style="flex:1">Annuler</button><button class="btn warn" id="suGo" style="flex:2">Diffuser l'alerte</button></div></div>`);
+  bindClose();
+  modal.querySelector("#suGo").addEventListener("click",()=>{ api.signalStockUrgent(modal.querySelector("#suMsg").value); closeModal(); });
+}
+
+/* ---- console manager ---- */
+function openRecapModal(){
+  const served=S.orders.filter(o=>o.status==="servie"||o.status==="archivee");
+  const encaisse=S.history.reduce((s,h)=>s+h.total,0);
+  const activeTables=S.tables.filter(t=>t.status!=="libre").length;
+  const low=S.products.filter(p=>p.qty<=20);
+  const overrides=S.tableOverrides.length, denied=S.tableOverrideRequests.filter(r=>r.status==="denied").length;
+  const pendingOrders=S.orders.filter(o=>o.status==="en_attente"||o.status==="envoyee").length;
+  const za={}; S.tables.forEach(t=>{ if(t.status!=="libre") za[t.zone_id]=(za[t.zone_id]||0)+1; });
+  const topZones=Object.entries(za).sort((a,b)=>b[1]-a[1]).map(([z,c])=>`${zoneById(z).name} (${c})`).join(", ")||"—";
+  let h=`<div class="modal-b">
+    <div class="kpis">
+      <div class="kpi"><div class="v stat-disponible">${encaisse}€</div><div class="k">Encaissé (service)</div></div>
+      <div class="kpi"><div class="v">${served.length}</div><div class="k">Commandes servies</div></div>
+      <div class="kpi"><div class="v">${activeTables}</div><div class="k">Tables actives</div></div>
+      <div class="kpi"><div class="v">${pendingOrders}</div><div class="k">En attente</div></div>
+      <div class="kpi"><div class="v stat-bientot_epuise">${low.length}</div><div class="k">Bientôt épuisés</div></div>
+      <div class="kpi"><div class="v">${overrides}</div><div class="k">Overrides effectués</div></div>
+    </div>
+    <div class="sect">Frictions (à surveiller)</div>
+    <div class="list-row"><div class="l"><b>${denied}</b><small>demande(s) d'assignation refusée(s)</small></div></div>
+    <div class="list-row"><div class="l"><b>Zones les plus actives</b><small>${topZones}</small></div></div>
+    <div class="sect">Produits bientôt épuisés</div>
+    ${low.length?low.map(p=>`<div class="list-row"><div class="l"><b>${svgEsc(p.name)}</b><small class="stat-${stockStatus(p.qty)}">${p.qty} en stock</small></div></div>`).join(""):`<div class="muted">Stock sain.</div>`}
+    <div class="sect">Historique du service</div>
+    ${S.history.length?S.history.map(x=>`<div class="list-row"><div class="l"><b>${svgEsc(x.table)}</b><small>${x.server} · il y a ${rel(x.at)}</small></div><div><b>${x.total}€</b></div></div>`).join(""):`<div class="muted">Aucune commande archivée.</div>`}
+  </div>`;
+  openModal(modalHead("📊 Récap du service")+h); bindClose();
+}
+function openStockModal(){
+  const st=currentStaff(), canEdit=can(st.role,"manage_stock"), showP=can(st.role,"view_prices");
+  const low=S.products.filter(p=>p.qty<=20).length;
+  let h=`<div class="modal-b">
+    <div class="kpis" style="margin-bottom:12px">
+      <div class="kpi"><div class="v">${S.products.length}</div><div class="k">Références</div></div>
+      <div class="kpi"><div class="v stat-bientot_epuise">${low}</div><div class="k">À réapprovisionner</div></div>
+    </div>`;
+  ["bouteille","verre","soft","autre"].forEach(ck=>{
+    const items=S.products.filter(p=>p.category===ck); if(!items.length) return;
+    h+=`<div class="sect">${CAT[ck].icon} ${CAT[ck].label}</div>`;
+    items.forEach(p=>{ const ss=stockStatus(p.qty),pct=Math.min(100,p.qty/60*100),bc=ss==="disponible"?"var(--green)":ss==="bientot_epuise"?"var(--amber)":"var(--red)";
+      h+=`<div class="list-row"><div class="l" style="flex:1"><b>${svgEsc(p.name)}</b>
+        <small class="stat-${ss}">${p.qty} en stock · ${ss.replace("_"," ")}${showP?` · ${p.price}€`:""}</small>
+        <div class="stockbar"><i style="width:${pct}%;background:${bc}"></i></div></div>
+        ${canEdit?`<div style="display:flex;gap:6px"><button class="btn tiny" data-stk="${p.id}" data-d="-1">−</button><button class="btn tiny" data-stk="${p.id}" data-d="1">＋</button></div>`:""}</div>`;
+    });
+  });
+  h+=`</div>`;
+  openModal(modalHead("📦 Stock")+h); bindClose();
+  modal.querySelectorAll("[data-stk]").forEach(b=>b.addEventListener("click",()=>{ api.adjustStock(b.getAttribute("data-stk"),+b.getAttribute("data-d")); openStockModal(); }));
+}
+function openTeamModal(){
+  let h=`<div class="modal-b"><div class="sect">Délégation « prendre une table »</div>`;
+  S.staff.filter(s=>s.role==="serveur").forEach(s=>{ const on=delegationOf(s.id);
+    h+=`<div class="list-row"><div class="l"><b>${s.name}</b><small>${on?"peut s'auto-assigner une table":"passe par ta validation"}</small></div>
+      <button class="btn tiny ${on?'primary':'ghost'}" data-deleg="${s.id}">${on?"Activée":"Désactivée"}</button></div>`; });
+  h+=`<div class="sect" style="margin-top:16px">Plan de salle</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${S.zones.map(z=>`<button class="btn tiny" data-add="${z.id}">＋ ${svgEsc(z.name)}</button>`).join("")}</div>
+    <p class="hint" style="margin-top:8px">Glisse une table sur la map pour la déplacer. Touche un nom de zone pour le renommer.</p>
+    <div class="sect" style="margin-top:16px">Service</div>
+    ${S.shift.closed?`<p class="hint">Service clôturé.</p>`:`<button class="btn warn" data-close-shift style="width:100%;justify-content:center">⏹ Clôturer le service</button>`}
+  </div>`;
+  openModal(modalHead("👥 Équipe & plan")+h); bindClose();
+  modal.querySelectorAll("[data-deleg]").forEach(b=>b.addEventListener("click",()=>{ api.toggleDelegation(b.getAttribute("data-deleg")); openTeamModal(); }));
+  modal.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>{ api.addTable(b.getAttribute("data-add")); closeModal(); }));
+  const cs=modal.querySelector("[data-close-shift]"); if(cs) cs.addEventListener("click",()=>{ api.closeShift(); openTeamModal(); });
+}
+
+/* ---- démo guidée ---- */
+function openDemoModal(){
+  const t1=tableById("t1"),t2=tableById("t2");
+  const steps=[
+    {role:"commis",who:"Sam",id:"c1",txt:"transmet le bon de la Loge A au bar",done:t1.status!=="commande_en_attente"},
+    {role:"barmaid",who:"Lea",id:"b1",txt:"prépare la bouteille et signale « Loge B prête »",done:["commande_prete","servie","a_encaisser"].includes(t2.status)},
+    {role:"serveur",who:"Alex",id:"s1",txt:"voit l'alerte sur la map → « Servie ✓ ». La loge change de statut toute seule.",done:["servie","a_encaisser"].includes(t2.status)},
+    {role:"manager",who:"Nora",id:"m1",txt:"suit le récap, les demandes et les frictions",done:false},
+  ];
+  const cv={commis:"blue",serveur:"green",barmaid:"violet",manager:"magenta"};
+  let h=`<div class="modal-b"><p class="hint" style="margin-bottom:12px">Un service coordonné <b>sans se parler</b>. Suivez les 4 étapes en changeant de rôle — la salle réagit en direct.</p>`;
+  steps.forEach((s,i)=>{ h+=`<div class="stepcard ${s.done?"done":""}"><div class="n">${s.done?"✓":i+1}</div>
+    <div style="flex:1"><span class="role" style="color:var(--${cv[s.role]})">${ROLE_LABEL[s.role]} · ${s.who}</span><p>${s.txt}</p>
+    <button class="btn tiny" data-demo="${s.id}">Incarner ${s.who} →</button></div></div>`; });
+  h+=`</div>`;
+  openModal(modalHead("▶ Démo guidée")+h); bindClose();
+  modal.querySelectorAll("[data-demo]").forEach(b=>b.addEventListener("click",()=>{ closeModal(); setIdentity(b.getAttribute("data-demo")); }));
+}
+
+/* ==========================================================================
+   Header / identité
+   ========================================================================== */
+function buildIdentitySelect(){
+  const sel=document.getElementById("who"), order=["serveur","commis","barmaid","manager"];
+  sel.innerHTML=order.map(role=>`<optgroup label="${ROLE_LABEL[role]}">${S.staff.filter(s=>s.role===role).map(s=>`<option value="${s.id}">${s.name} — ${ROLE_LABEL[role]}</option>`).join("")}</optgroup>`).join("");
+  sel.value=currentStaffId; sel.onchange=()=>setIdentity(sel.value);
+}
+function setIdentity(id){
+  currentStaffId=id;
+  const sel=document.getElementById("who"); if(sel.value!==id) sel.value=id;
+  const st=currentStaff(), rb=document.getElementById("roleBadge");
+  rb.textContent=ROLE_LABEL[st.role]; rb.className="role-badge role-"+st.role;
+  save(); renderAll();
+}
+function updateShiftPill(){
+  const pill=document.getElementById("shiftPill"), txt=document.getElementById("shiftText");
+  if(S.shift.closed){ pill.classList.add("closed"); txt.textContent="Service clôturé"; }
+  else{ pill.classList.remove("closed"); txt.textContent="Service en cours"; }
+}
+
+/* ---- toast + timers ---- */
+function toast(msg,kind){
+  const el=document.createElement("div"); el.className="toast "+(kind||""); el.textContent=msg;
+  document.getElementById("toasts").appendChild(el);
+  setTimeout(()=>{ el.style.opacity="0"; el.style.transition="opacity .3s"; setTimeout(()=>el.remove(),300); },2600);
+}
+function rel(ts){ const s=Math.max(0,(now()-ts)/1000); return s<60?Math.floor(s)+"s":s<3600?Math.floor(s/60)+" min":Math.floor(s/3600)+"h"; }
+function fmtTimer(t){ const s=Math.max(0,Math.floor((now()-t)/1000)); return `⏱ ${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function tickTimers(){
+  document.querySelectorAll(".js-timer").forEach(el=>{ const since=+el.getAttribute("data-since"); el.textContent=fmtTimer(since);
+    const age=(now()-since)/1000; el.style.color=age>=PRIORITY_AT?"var(--red)":age>=URGENT_AT?"var(--amber)":"var(--ink-faint)"; });
+}
+
+/* ==========================================================================
+   Vue mobile (serveurs en salle) — onglets bas : À faire / Plan / Ma salle
+   ========================================================================== */
+let mobileView = "todo";
+function relevantTables(st){
+  if(st.role==="manager") return S.tables;
+  if(st.role==="serveur"||st.role==="commis") return S.tables.filter(t=>isMine(t));
+  if(st.role==="barmaid") return S.tables.filter(t=>{ const o=activeOrder(t.id); return o&&["envoyee","en_attente","prete"].includes(o.status); });
+  return [];
+}
+function todoCount(st){ return st.role==="manager" ? S.tableOverrideRequests.filter(r=>r.status==="pending").length : buildTodos(st).length; }
+function renderMobileNav(){
+  const st=currentStaff(), n=todoCount(st);
+  const items=[{v:"todo",ic:"✦",label:"À faire",b:n},{v:"map",ic:"🗺",label:"Plan",b:0},{v:"tables",ic:"▤",label:"Ma salle",b:0}];
+  const nav=document.getElementById("mnav");
+  nav.innerHTML=items.map(it=>`<button data-mv="${it.v}" class="${mobileView===it.v?"active":""}"><span class="ic">${it.ic}</span>${it.label}${it.b?`<span class="nbadge">${it.b}</span>`:""}</button>`).join("");
+  nav.querySelectorAll("[data-mv]").forEach(b=>b.addEventListener("click",()=>setMobileView(b.getAttribute("data-mv"))));
+}
+function setMobileView(v){ mobileView=v; document.body.setAttribute("data-mview",v); renderMobileNav(); if(v==="tables") renderMobileTables(); }
+function renderMobileTables(){
+  const st=currentStaff(), list=relevantTables(st), showP=can(st.role,"view_prices");
+  let h=`<div class="panel-b" style="padding-bottom:0"><div class="headline"><span>Ma salle — ${ROLE_LABEL[st.role]}</span><span class="cnt-inline">${list.length}</span></div></div><div class="tabbody" style="padding-top:4px">`;
+  if(!list.length) h+=`<div class="muted">Aucune table pour toi pour l'instant.</div>`;
+  else h+=list.map(t=>{ const sm=STATUS[t.status],due=tableDue(t.id),a=assignLabel(t);
+    return `<button class="mtrow" data-open="${t.id}"><span class="dot" style="background:${sm.color}"></span>
+      <span class="l"><b>${svgEsc(t.name)}</b><small>${sm.icon} ${sm.label}${due>0&&showP?` · ${due}€`:""}${a.unassigned?" · ⚠ non assignée":""}</small></span>
+      <span class="chev">›</span></button>`; }).join("");
+  const foot=[];
+  if(can(st.role,"create_order")) foot.push(`<button class="btn primary" data-mact="neworder" style="flex:1;justify-content:center">＋ Commande</button>`);
+  if(can(st.role,"request_renfort")) foot.push(`<button class="btn warn" data-mact="renfort" style="flex:1;justify-content:center">🆘 Renfort</button>`);
+  if(foot.length) h+=`<div style="display:flex;gap:8px;margin-top:8px">${foot.join("")}</div>`;
+  h+=`</div>`;
+  const el=document.getElementById("mtables"); el.innerHTML=h;
+  el.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>openTableDetail(b.getAttribute("data-open"))));
+  el.querySelectorAll("[data-mact]").forEach(b=>{ const a=b.getAttribute("data-mact");
+    b.addEventListener("click",()=>{ if(a==="neworder") openNewOrder(); else if(a==="renfort") openRenfort(); }); });
+}
+
+/* FAB « + Commande » : visible pour qui peut créer une commande (serveur/manager) */
+function updateFab(){ document.getElementById("fab").classList.toggle("show", can(currentStaff().role,"create_order")); }
+
+/* ---- boucle & init ---- */
+function renderAll(){ updateShiftPill(); renderMap(); renderRail(); renderMobileNav(); renderMobileTables(); updateFab(); tickTimers(); }
+document.getElementById("resetBtn").addEventListener("click",resetDemo);
+document.getElementById("demoBtn").addEventListener("click",openDemoModal);
+document.getElementById("fab").addEventListener("click",()=>openNewOrder());
+document.getElementById("bClose").addEventListener("click",()=>{ document.getElementById("banner").style.display="none"; });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
+
+function setEstablishment(){
+  document.title = `ServeMap · ${ESTAB.name}`;
+  document.getElementById("estabTag").textContent = `${ESTAB.name} · ${ESTAB.city}`;
+  document.getElementById("roomName").textContent = ESTAB.name;
+  document.getElementById("footnote").textContent =
+    `${ESTAB.note}  ·  Touchez une table pour agir ; en manager, glissez une table ou touchez un nom de zone.`;
+}
+setEstablishment(); load(); escalate(); buildIdentitySelect(); document.body.setAttribute("data-mview",mobileView); setIdentity(currentStaffId);
+setInterval(()=>{ if(dragState) return; const ch=escalate(); if(ch){ save(); if(!overlay.classList.contains("on")) renderAll(); } tickTimers(); },1000);
+</script>
+</body>
+</html>
