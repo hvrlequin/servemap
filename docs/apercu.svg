@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" font-family="'Segoe UI',system-ui,sans-serif">
+  <defs>
+    <radialGradient id="bg" cx="20%" cy="0%" r="90%">
+      <stop offset="0" stop-color="#17110a"/><stop offset="55%" stop-color="#0c0910"/><stop offset="100%" stop-color="#08060a"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0d488"/><stop offset="1" stop-color="#c9a24a"/>
+    </linearGradient>
+    <linearGradient id="logo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8c56a"/><stop offset="0.5" stop-color="#a78bfa"/><stop offset="1" stop-color="#ff4fd8"/>
+    </linearGradient>
+    <radialGradient id="floor" cx="50%" cy="40%" r="70%">
+      <stop offset="0" stop-color="rgba(232,197,106,.18)"/><stop offset="55%" stop-color="rgba(167,139,250,.10)"/><stop offset="100%" stop-color="rgba(255,79,216,.05)"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="8" y="8" width="1184" height="614" rx="20" fill="none" stroke="rgba(220,190,120,.16)"/>
+
+  <!-- Header -->
+  <g>
+    <rect x="34" y="24" width="40" height="40" rx="12" fill="url(#logo)"/>
+    <text x="55" y="52" text-anchor="middle" font-size="22" fill="#0a0710" font-weight="800">◈</text>
+    <text x="88" y="46" font-size="26" font-weight="800" fill="#f6efe0">Serve<tspan fill="#e8c56a">Map</tspan></text>
+    <text x="88" y="63" font-size="11" letter-spacing="2" fill="#8c8271">MIRANO · BRUXELLES · PLAN DE SALLE LIVE</text>
+    <g transform="translate(946,30)">
+      <rect x="0" y="0" width="150" height="30" rx="15" fill="rgba(28,22,36,.66)" stroke="rgba(220,190,120,.2)"/>
+      <circle cx="18" cy="15" r="4" fill="#22e0a0"/><text x="30" y="19" font-size="12" fill="#c8bda6">Service en cours</text>
+    </g>
+    <g transform="translate(1104,30)">
+      <rect x="0" y="0" width="62" height="30" rx="15" fill="none" stroke="#22e0a0"/>
+      <text x="31" y="19" text-anchor="middle" font-size="11" font-weight="800" fill="#22e0a0">SERVEUR</text>
+    </g>
+  </g>
+
+  <!-- ================= MAP (géométrie réelle de l'app, échelle 0.72) ================= -->
+  <g transform="translate(26,84) scale(0.72)">
+    <rect class="wall" x="16" y="16" width="968" height="608" rx="22" fill="none" stroke="rgba(220,190,120,.28)" stroke-width="3"/>
+
+    <!-- zones -->
+    <g fill="#151019" stroke="rgba(220,190,120,.16)" stroke-width="1.5">
+      <rect x="648" y="56" width="320" height="414" rx="16"/>
+      <rect x="32" y="56" width="584" height="150" rx="16"/>
+      <rect x="32" y="498" width="430" height="102" rx="16"/>
+      <rect x="32" y="240" width="330" height="240" rx="16"/>
+    </g>
+    <g fill="#8c8271" font-size="15" font-weight="700" letter-spacing="2">
+      <text x="664" y="82">BALCON</text><text x="48" y="82">LOGES</text>
+      <text x="48" y="524">FUMOIR</text><text x="48" y="266">BAR CENTRAL</text>
+    </g>
+
+    <!-- parterre + DJ -->
+    <rect x="386" y="238" width="228" height="198" rx="18" fill="url(#floor)" stroke="rgba(232,197,106,.38)" stroke-width="1.5"/>
+    <text x="500" y="343" text-anchor="middle" fill="rgba(232,197,106,.45)" font-size="16" font-weight="800" letter-spacing="6">PARTERRE</text>
+    <rect x="452" y="206" width="96" height="27" rx="7" fill="rgba(167,139,250,.28)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="500" y="225" text-anchor="middle" fill="#efe7ff" font-size="12" font-weight="800" letter-spacing="4">◗ DJ ◖</text>
+
+    <!-- bar counter -->
+    <rect x="58" y="422" width="278" height="34" rx="10" fill="rgba(167,139,250,.18)" stroke="#a78bfa" stroke-width="2"/>
+    <text x="197" y="444" text-anchor="middle" fill="#e9deff" font-size="13" font-weight="800" letter-spacing="4">B A R</text>
+
+    <!-- entrée -->
+    <rect x="700" y="618" width="170" height="6" rx="3" fill="#22e0a0"/>
+    <text x="510" y="556" fill="#22e0a0" font-size="11" font-weight="800" letter-spacing="2">▸ ENTRÉE / VESTIAIRE</text>
+
+    <!-- tables : circle stroke = statut -->
+    <g font-family="'Segoe UI',sans-serif">
+      <!-- helper look: r30 disc -->
+      <g transform="translate(150,120)"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#ffb020" stroke-width="3"/><text y="7" text-anchor="middle" font-size="20" fill="#fff">◔</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Loge A</text></g>
+      <g transform="translate(330,120)"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#38bdf8" stroke-width="3"/><text y="7" text-anchor="middle" font-size="20" fill="#fff">➤</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Loge B</text></g>
+      <g transform="translate(515,120)"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#22e0a0" stroke-width="3"/><text y="7" text-anchor="middle" font-size="20" fill="#fff">○</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Loge C</text></g>
+
+      <g transform="translate(740,150)"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#ff4fd8" stroke-width="3"/><text y="8" text-anchor="middle" font-size="20" fill="#fff">€</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Carré 1</text></g>
+      <g transform="translate(900,150)"><circle r="40" fill="none" stroke="#ff3b6b" stroke-width="2" opacity=".5"/><circle r="30" fill="rgba(9,14,28,.95)" stroke="#ff3b6b" stroke-width="3"/><text y="8" text-anchor="middle" font-size="20" fill="#fff">⚡</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Carré 2</text>
+        <g transform="translate(26,-26)"><circle r="13" fill="#22d3ee" stroke="#05070d" stroke-width="2"/><text y="1" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="800" fill="#05070d">2</text></g></g>
+      <g transform="translate(740,340)"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#ffb020" stroke-width="3"/><text y="7" text-anchor="middle" font-size="20" fill="#fff">◔</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Carré 3</text></g>
+      <g transform="translate(900,340)"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#22e0a0" stroke-width="3"/><text y="7" text-anchor="middle" font-size="20" fill="#fff">○</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Carré 4</text></g>
+
+      <g transform="translate(150,545)"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#ff4fd8" stroke-width="3"/><text y="8" text-anchor="middle" font-size="20" fill="#fff">€</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Fumoir 1</text></g>
+      <g transform="translate(330,545)"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#a78bfa" stroke-width="3"/><text y="8" text-anchor="middle" font-size="18" fill="#fff">🍾</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Fumoir 2</text></g>
+
+      <g transform="translate(120,315)" opacity=".55"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#22e0a0" stroke-width="3"/><text y="7" text-anchor="middle" font-size="20" fill="#fff">○</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Bar 1</text></g>
+      <g transform="translate(250,330)" opacity=".55"><circle r="30" fill="rgba(9,14,28,.95)" stroke="#ffb020" stroke-width="3"/><text y="7" text-anchor="middle" font-size="20" fill="#fff">◔</text><text y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#f6efe0">Bar 2</text></g>
+
+      <!-- pip stock sur le bar / renfort zone -->
+      <g transform="translate(320,368)"><circle r="13" fill="#ff3b6b" stroke="#05070d" stroke-width="2"/><text y="1" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#05070d">⛔</text></g>
+      <g transform="translate(952,72)"><circle r="13" fill="#ffb020" stroke="#05070d" stroke-width="2"/><text y="1" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#05070d">🆘</text></g>
+    </g>
+  </g>
+
+  <!-- ================= RAIL (aperçu) ================= -->
+  <g transform="translate(792,92)">
+    <rect x="0" y="0" width="376" height="452" rx="14" fill="rgba(28,22,36,.55)" stroke="rgba(220,190,120,.16)"/>
+    <!-- identité -->
+    <g transform="translate(16,16)">
+      <rect x="0" y="0" width="46" height="46" rx="13" fill="rgba(40,31,52,.8)" stroke="rgba(220,190,120,.3)"/>
+      <text x="23" y="31" text-anchor="middle" font-size="18" font-weight="800" fill="#f6efe0">A</text>
+      <text x="58" y="20" font-size="16" font-weight="700" fill="#f6efe0">Alex</text>
+      <text x="58" y="38" font-size="11" fill="#8c8271">Tes carrés &amp; loges, d'un coup d'œil.</text>
+    </g>
+    <!-- onglets -->
+    <g transform="translate(16,78)">
+      <rect x="0" y="0" width="172" height="40" rx="10" fill="rgba(232,197,106,.10)" stroke="#e8c56a"/>
+      <text x="86" y="25" text-anchor="middle" font-size="12.5" font-weight="700" fill="#e8c56a">⚡ Ma mission</text>
+      <rect x="180" y="0" width="164" height="40" rx="10" fill="none" stroke="rgba(220,190,120,.16)"/>
+      <text x="262" y="25" text-anchor="middle" font-size="12.5" font-weight="700" fill="#8c8271">👁 Salle en direct</text>
+    </g>
+    <text x="16" y="146" font-size="12" letter-spacing="1.4" fill="#8c8271">À FAIRE MAINTENANT</text>
+    <g transform="translate(320,134)"><rect x="0" y="0" width="40" height="20" rx="10" fill="#ff4fd8"/><text x="20" y="14" text-anchor="middle" font-size="11" font-weight="800" fill="#1a0016">1</text></g>
+
+    <!-- mission card -->
+    <g transform="translate(16,158)">
+      <rect x="0" y="0" width="344" height="150" rx="14" fill="rgba(40,31,52,.78)" stroke="rgba(220,190,120,.16)"/>
+      <rect x="0" y="0" width="5" height="150" rx="2.5" fill="#ff4fd8"/>
+      <rect x="16" y="16" width="44" height="44" rx="12" fill="rgba(255,79,216,.16)"/>
+      <text x="38" y="46" text-anchor="middle" font-size="22" fill="#ff4fd8">€</text>
+      <text x="72" y="34" font-size="15.5" font-weight="800" fill="#f6efe0">À encaisser</text>
+      <text x="72" y="52" font-size="12.5" fill="#c8bda6">📍 Fumoir 1</text>
+      <text x="16" y="86" font-size="12.5" fill="#c8bda6">Total 52€ — encaisse et libère la table</text>
+      <rect x="16" y="98" width="240" height="40" rx="11" fill="none" stroke="#e8c56a"/>
+      <rect x="16" y="98" width="240" height="40" rx="11" fill="rgba(232,197,106,.18)"/>
+      <text x="136" y="123" text-anchor="middle" font-size="14" font-weight="700" fill="#fff5da">Encaisser</text>
+      <rect x="264" y="98" width="64" height="40" rx="11" fill="none" stroke="rgba(220,190,120,.2)"/>
+      <text x="296" y="123" text-anchor="middle" font-size="13" fill="#c8bda6">Voir</text>
+    </g>
+    <!-- renfort -->
+    <g transform="translate(16,324)">
+      <rect x="0" y="0" width="344" height="42" rx="11" fill="none" stroke="#ff4fd8"/>
+      <text x="172" y="27" text-anchor="middle" font-size="13" font-weight="700" fill="#ffe4fb">🆘 Renfort</text>
+    </g>
+    <text x="16" y="392" font-size="11.5" fill="#8c8271">2 tables non assignées — touche-la pour la prendre.</text>
+  </g>
+
+  <!-- FAB -->
+  <g transform="translate(1010,556)">
+    <rect x="0" y="0" width="150" height="44" rx="22" fill="url(#gold)"/>
+    <text x="75" y="29" text-anchor="middle" font-size="15" font-weight="800" fill="#241a05">＋ Commande</text>
+  </g>
+
+  <!-- Légende -->
+  <g transform="translate(30,588)" font-size="11" fill="#c8bda6">
+    <g><rect x="0" y="0" width="11" height="11" rx="3" fill="#22e0a0"/><text x="17" y="10">Libre</text></g>
+    <g transform="translate(70,0)"><rect x="0" y="0" width="11" height="11" rx="3" fill="#ffb020"/><text x="17" y="10">En attente</text></g>
+    <g transform="translate(165,0)"><rect x="0" y="0" width="11" height="11" rx="3" fill="#22d3ee"/><text x="17" y="10">Prête</text></g>
+    <g transform="translate(235,0)"><rect x="0" y="0" width="11" height="11" rx="3" fill="#a78bfa"/><text x="17" y="10">Servie</text></g>
+    <g transform="translate(305,0)"><rect x="0" y="0" width="11" height="11" rx="3" fill="#ff4fd8"/><text x="17" y="10">Addition</text></g>
+    <g transform="translate(385,0)"><rect x="0" y="0" width="11" height="11" rx="3" fill="#ff3b6b"/><text x="17" y="10">Priorité</text></g>
+  </g>
+  <text x="1168" y="598" text-anchor="end" font-size="12" font-style="italic" fill="#8c8271">Coordonner un service en salle — sans se parler.</text>
+</svg>

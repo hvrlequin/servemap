@@ -1,5 +1,7 @@
 # ServeMap — Plan de salle live
 
+![ServeMap — aperçu du plan de salle live (profil Mirano)](docs/apercu.svg)
+
 **ServeMap n'est pas une caisse ni un gestionnaire de tables. C'est un *plan de salle vivant*** :
 statuts, alertes et assignations posés **spatialement** sur une carte, pour coordonner un
 service en salle (bar, club, restaurant, événement) **sans se parler**.
